@@ -1,12 +1,24 @@
 package main
 
 import (
+	"os"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/gin-gonic/gin"
+	"github.com/kardianos/osext"
 	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 	"github.com/nitrous-io/nitrous-solo/server"
 )
 
 func main() {
+	if os.Getenv("NITROUS_ENV") == "production" {
+		gin.SetMode("release")
+	}
+	appDir, err := osext.ExecutableFolder()
+	if err != nil {
+		logrus.Fatal(err)
+	}
 	go ws.RunHub()
-	r := server.New()
+	r := server.New(appDir)
 	r.Run(":3000")
 }

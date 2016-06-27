@@ -1,16 +1,22 @@
-{{ define "index.tmpl" }}
+package templates
+
+import "strings"
+
+var rootIndex = strings.TrimSpace(`
+{{ define "root.index" }}
 <!DOCTYPE html>
 <html lang='en'>
   <head>
     <meta charset='utf-8'>
     <title>Nitrous Solo</title>
-    <link href='/assets/app.css' rel='stylesheet'>
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
   </head>
   <body>
     <script>
       this.NitrousConfig = {{ .config }};
     </script>
-    <script src="/assets/app.js"></script>
+    <script src="/assets/bundle.js"></script>
   </body>
 </html>
 {{ end }}
+`)

@@ -8,7 +8,7 @@ import (
 )
 
 func Index(c *gin.Context) {
-	c.HTML(http.StatusOK, "index.tmpl", gin.H{
+	c.HTML(http.StatusOK, "root.index", gin.H{
 		"config": template.JS(`{ "foo": "bar" }`),
 	})
 }

@@ -1,5 +1,11 @@
 #!/bin/bash
+set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+export NITROUS_ENV=${NITROUS_ENV:-"development"}
+BUILD_DIR="build/$NITROUS_ENV"
+
 cd $DIR/..
-$DIR/env go run nitrous.go
+script/build-server
+script/build-ide
+"$BUILD_DIR/nitrous"

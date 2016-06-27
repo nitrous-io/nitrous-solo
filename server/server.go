@@ -3,11 +3,12 @@ package server
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/nitrous-io/nitrous-solo/routes"
+	"github.com/nitrous-io/nitrous-solo/templates"
 )
 
-func New() *gin.Engine {
+func New(appDir string) *gin.Engine {
 	r := gin.New()
-	r.LoadHTMLGlob("./templates/*.tmpl")
-	routes.Draw(r)
+	r.SetHTMLTemplate(templates.T)
+	routes.Draw(r, appDir)
 	return r
 }
