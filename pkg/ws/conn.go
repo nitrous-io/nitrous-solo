@@ -5,6 +5,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
+	"github.com/satori/go.uuid"
 )
 
 const (
@@ -19,13 +20,17 @@ var upgrader = websocket.Upgrader{}
 type Conn struct {
 	ws   *websocket.Conn
 	send chan []byte
+	id   string
 }
 
 func newConn(ws *websocket.Conn) *Conn {
-	return &Conn{
+	c := &Conn{
 		send: make(chan []byte, 256),
 		ws:   ws,
+		id:   uuid.NewV4().String(),
 	}
+	c.send <- []byte("hello|" + c.id)
+	return c
 }
 
 func (c *Conn) readPump() {

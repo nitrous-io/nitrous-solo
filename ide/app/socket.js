@@ -9,6 +9,7 @@ class Socket {
     this._intentionalClose = false;
     this._retries = 0;
     this._reconnectTimer = null;
+    this._id = null;
   }
 
   open() {
@@ -38,9 +39,17 @@ class Socket {
     return;
   }
 
+  get id() {
+    return this._id;
+  }
+
   get readyState() {
     if (this._ws) {
-      return this._ws.readyState;
+      const rawState = this._ws.readyState;
+      if (rawState === WebSocket.OPEN && !this._id) {
+        return WebSocket.CONNECTING;
+      }
+      return rawState;
     }
     return WebSocket.CLOSED;
   }
@@ -68,15 +77,15 @@ class Socket {
     this._heartbeatTimer = window.setInterval(() => {
       this.send('h');
     }, HEARTBEAT_INTERVAL);
-
-    if (typeof this.onopen === 'function') {
-      this.onopen(e);
-    }
   }
 
   _onclose(e) {
     window.clearInterval(this._heartbeatTimer);
     this._heartbeatTimer = null;
+    this._id = null;
+    const ws = this._ws;
+    ws.onopen = ws.onclose = ws.onmessage = ws.onerror = null;
+    this._ws = null;
 
     if (typeof this.onclose === 'function') {
       this.onclose(e);
@@ -89,6 +98,24 @@ class Socket {
   }
 
   _onmessage(e) {
+    const msg = e.data;
+    if (msg) {
+      var i = msg.indexOf("|");
+      if (i !== -1) {
+        const cmd = msg.substring(0, i),
+              data = msg.substring(i+1);
+
+        if (cmd === 'hello') {
+          this._id = data;
+
+          if (typeof this.onopen === 'function') {
+            this.onopen(e);
+          }
+          return
+        }
+      }
+    }
+
     if (typeof this.onmessage === 'function') {
       this.onmessage(e);
     }
