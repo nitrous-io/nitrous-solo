@@ -36,14 +36,13 @@ func (c *Conn) readPump() {
 	c.ws.SetReadDeadline(time.Now().Add(pongWait))
 	c.ws.SetPongHandler(func(string) error { c.ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, message, err := c.ws.ReadMessage()
+		_, _ /*message*/, err := c.ws.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				logrus.Warn("Unexpected ws close:", err)
 			}
 			break
 		}
-		hub.broadcast <- message
 	}
 }
 
