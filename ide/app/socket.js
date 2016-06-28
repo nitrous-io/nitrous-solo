@@ -4,6 +4,11 @@ const WebSocket = window.WebSocket,
 class Socket {
   constructor(url) {
     this.url = url;
+    this._ws = null;
+    this._heartbeatTimer = null;
+    this._intentionalClose = false;
+    this._retries = 0;
+    this._reconnectTimer = null;
   }
 
   open() {
@@ -20,6 +25,7 @@ class Socket {
 
   close() {
     if (this._ws) {
+      this._intentionalClose = true;
       return this._ws.close(...arguments);
     }
     return;
@@ -39,7 +45,26 @@ class Socket {
     return WebSocket.CLOSED;
   }
 
+  _reconnect() {
+    let delay = 5000;
+    if (this._retries <= 1) {
+      delay = 1000;
+    } else if (this._retries <= 5) {
+      delay = 2000;
+    } else if (this._retries <= 10) {
+      delay = 3000;
+    }
+
+    window.clearTimeout(this._reconnectTimer);
+    this._reconnectTimer = window.setTimeout(() => {
+      this.open();
+    }, delay);
+
+    this._retries++;
+  }
+
   _onopen(e) {
+    this._retries = 0;
     this._heartbeatTimer = window.setInterval(() => {
       this.send('h');
     }, HEARTBEAT_INTERVAL);
@@ -50,14 +75,17 @@ class Socket {
   }
 
   _onclose(e) {
-    if (this._heartbeatTimer) {
-      window.clearInterval(this._heartbeatTimer);
-      this._heartbeatTimer = null;
-    }
+    window.clearInterval(this._heartbeatTimer);
+    this._heartbeatTimer = null;
 
     if (typeof this.onclose === 'function') {
       this.onclose(e);
     }
+
+    if (!this._intentionalClose) {
+      this._reconnect();
+    }
+    this._intentionalClose = false;
   }
 
   _onmessage(e) {
