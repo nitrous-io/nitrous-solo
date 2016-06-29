@@ -23,7 +23,7 @@ var _ = Describe("root", func() {
 	)
 
 	BeforeEach(func() {
-		s = httptest.NewServer(server.New())
+		s = httptest.NewServer(server.New(""))
 	})
 
 	AfterEach(func() {
