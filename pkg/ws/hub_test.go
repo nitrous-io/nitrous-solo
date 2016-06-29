@@ -1,102 +1,189 @@
-package ws_test
+package ws
 
 import (
 	"runtime"
 
-	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("hub", func() {
+func resetHub() {
+	hub.stop <- struct{}{}
+	hub = newHub()
+	go hub.run()
+}
+
+var _ = Describe("ws/hub", func() {
 	BeforeEach(func() {
-		ws.ResetHub_()
+		resetHub()
 	})
 
-	Describe("RegisterConn", func() {
+	Describe("registerConn channel", func() {
 		It("adds a connection to connections list", func() {
-			conn := &ws.Conn{}
+			conn := newConn(nil)
 
-			Expect(ws.HubConnections_()).To(HaveLen(0))
-			ws.RegisterConn_(conn)
+			Expect(hub.connections).To(HaveLen(0))
+
+			hub.registerConn <- conn
 			runtime.Gosched()
 
-			Expect(ws.HubConnections_()).To(HaveLen(1))
-			Expect(ws.HubConnections_()[conn]).NotTo(BeNil())
+			Expect(hub.connections).To(HaveLen(1))
+			Expect(hub.connections[conn.id]).To(Equal(conn))
 		})
 	})
 
-	Describe("UnregisterConn", func() {
+	Describe("unregisterConn channel", func() {
 		It("removes a connection from connections list", func() {
-			conn := &ws.Conn{Send: make(chan []byte, 10)}
+			conn := newConn(nil)
 
-			ws.RegisterConn_(conn)
+			hub.registerConn <- conn
 			runtime.Gosched()
-			Expect(ws.HubConnections_()).To(HaveLen(1))
+			Expect(hub.connections).To(HaveLen(1))
 
-			ws.UnregisterConn_(conn)
+			hub.unregisterConn <- conn
 			runtime.Gosched()
 
-			Expect(ws.HubConnections_()).To(HaveLen(0))
-			Expect(conn.Send).To(BeClosed())
+			Expect(hub.connections).To(HaveLen(0))
+			Expect(conn.send).To(BeClosed())
 		})
 	})
 
-	Describe("Broadcast", func() {
+	Describe("Send()", func() {
+		It("sends a message to a single connection with a given id", func() {
+			conn1 := newConn(nil)
+			conn2 := newConn(nil)
+
+			hub.registerConn <- conn1
+			hub.registerConn <- conn2
+			runtime.Gosched()
+
+			Expect(conn1.send).To(HaveLen(0))
+			Expect(conn2.send).To(HaveLen(0))
+
+			Send(conn1.id, "123", "foo", []byte("foobar777"))
+			runtime.Gosched()
+
+			Expect(conn1.send).To(HaveLen(1))
+			Expect(conn2.send).To(HaveLen(0))
+			Expect(<-conn1.send).To(Equal([]byte("m|foo|123|foobar777")))
+		})
+	})
+
+	Describe("Broadcast()", func() {
 		It("sends message to every connection", func() {
-			conn1 := &ws.Conn{Send: make(chan []byte, 10)}
-			conn2 := &ws.Conn{Send: make(chan []byte, 10)}
+			conn1 := newConn(nil)
+			conn2 := newConn(nil)
 
-			ws.RegisterConn_(conn1)
-			ws.RegisterConn_(conn2)
+			hub.registerConn <- conn1
+			hub.registerConn <- conn2
 			runtime.Gosched()
 
-			Expect(conn1.Send).To(HaveLen(0))
-			Expect(conn2.Send).To(HaveLen(0))
+			Expect(conn1.send).To(HaveLen(0))
+			Expect(conn2.send).To(HaveLen(0))
 
-			ws.Broadcast([]byte("foo"))
+			Broadcast("foo", []byte("foobar777"))
 			runtime.Gosched()
 
-			Expect(conn1.Send).To(HaveLen(1))
-			Expect(conn2.Send).To(HaveLen(1))
-			Expect(<-conn1.Send).To(Equal([]byte("foo")))
-			Expect(<-conn2.Send).To(Equal([]byte("foo")))
+			Expect(conn1.send).To(HaveLen(1))
+			Expect(conn2.send).To(HaveLen(1))
+			Expect(<-conn1.send).To(Equal([]byte("m|foo||foobar777")))
+			Expect(<-conn2.send).To(Equal([]byte("m|foo||foobar777")))
 		})
 	})
 
-	Describe("RegisterHandler", func() {
+	Describe("RegisterHandler()", func() {
 		It("registers a message handler", func() {
 			handlerCalled := false
-			handler := func(data []byte, reply chan []byte) {
+			handler := func(name string, data []byte, reply func([]byte)) {
 				handlerCalled = true
 			}
 
-			Expect(ws.HubHandlers_()).To(HaveLen(0))
+			Expect(hub.handlers).To(HaveLen(0))
 
-			ws.RegisterHandler("foo", handler)
+			RegisterHandler("foo", handler)
 			runtime.Gosched()
 
-			Expect(ws.HubHandlers_()).To(HaveLen(1))
+			Expect(hub.handlers).To(HaveLen(1))
 			Expect(handlerCalled).To(BeFalse())
-			ws.HubHandlers_()["foo"](nil, nil)
+
+			hub.handlers["foo"]("foo", nil, nil)
 			Expect(handlerCalled).To(BeTrue())
 		})
 	})
 
-	Describe("UnregisterHandler", func() {
+	Describe("UnregisterHandler()", func() {
 		It("unregisters a message handler", func() {
-			handler := func(data []byte, reply chan []byte) {}
+			handler := func(name string, data []byte, reply func([]byte)) {}
 
-			Expect(ws.HubHandlers_()).To(HaveLen(0))
+			Expect(hub.handlers).To(HaveLen(0))
 
-			ws.RegisterHandler("foo", handler)
+			RegisterHandler("foo", handler)
 			runtime.Gosched()
-			Expect(ws.HubHandlers_()).To(HaveLen(1))
+			Expect(hub.handlers).To(HaveLen(1))
 
-			ws.UnregisterHandler("foo")
+			UnregisterHandler("foo")
 			runtime.Gosched()
 
-			Expect(ws.HubHandlers_()).To(HaveLen(0))
+			Expect(hub.handlers).To(HaveLen(0))
+		})
+	})
+
+	Describe("parseAndHandleMessage()", func() {
+		type handlerCallArgs struct {
+			name  string
+			data  []byte
+			reply func([]byte)
+		}
+
+		var fooHandlerCallArgs, barHandlerCallArgs *handlerCallArgs
+		var conn1, conn2 *conn
+
+		BeforeEach(func() {
+			fooHandlerCallArgs = nil
+			barHandlerCallArgs = nil
+
+			fooHandler := func(name string, data []byte, reply func([]byte)) {
+				fooHandlerCallArgs = &handlerCallArgs{name, data, reply}
+			}
+
+			barHandler := func(name string, data []byte, reply func([]byte)) {
+				barHandlerCallArgs = &handlerCallArgs{name, data, reply}
+			}
+
+			conn1 = newConn(nil)
+			conn2 = newConn(nil)
+
+			hub.registerConn <- conn1
+			hub.registerConn <- conn2
+			RegisterHandler("foo", fooHandler)
+			RegisterHandler("bar", barHandler)
+			runtime.Gosched()
+
+			parseAndHandleMessage(conn1, []byte("m|foo|123|foobar777"))
+			runtime.Gosched()
+		})
+
+		It("calls a handler for the message name", func() {
+			Expect(fooHandlerCallArgs).NotTo(BeNil())
+			Expect(fooHandlerCallArgs.name).To(Equal("foo"))
+			Expect(fooHandlerCallArgs.data).To(Equal([]byte("foobar777")))
+			Expect(fooHandlerCallArgs.reply).NotTo(BeNil())
+			Expect(barHandlerCallArgs).To(BeNil())
+		})
+
+		It("passes a reply func to handler, which when called, sends a reply back to conn", func() {
+			Expect(fooHandlerCallArgs).NotTo(BeNil())
+			Expect(fooHandlerCallArgs.reply).NotTo(BeNil())
+
+			Expect(conn1.send).To(HaveLen(0))
+			Expect(conn2.send).To(HaveLen(0))
+
+			fooHandlerCallArgs.reply([]byte("bazqux2016"))
+			runtime.Gosched()
+
+			Expect(conn1.send).To(HaveLen(1))
+			Expect(conn2.send).To(HaveLen(0))
+			Expect(<-conn1.send).To(Equal([]byte("m|foo|123|bazqux2016")))
 		})
 	})
 })

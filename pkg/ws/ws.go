@@ -7,10 +7,11 @@ func Upgrade(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	conn := newConn(ws)
-	hub.registerConn <- conn
+	c := newConn(ws)
+	c.send <- []byte("reg|" + c.id)
+	hub.registerConn <- c
 
-	go conn.writePump()
-	conn.readPump()
+	go c.writePump()
+	c.readPump()
 	return nil
 }

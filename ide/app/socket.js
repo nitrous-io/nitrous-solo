@@ -105,7 +105,7 @@ class Socket {
         const cmd = msg.substring(0, i),
               data = msg.substring(i+1);
 
-        if (cmd === 'hello') {
+        if (cmd === 'reg') {
           this._id = data;
 
           if (typeof this.onopen === 'function') {
