@@ -8,7 +8,7 @@ func Upgrade(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	conn := newConn(ws)
-	hub.RegisterConn <- conn
+	hub.registerConn <- conn
 
 	go conn.writePump()
 	conn.readPump()

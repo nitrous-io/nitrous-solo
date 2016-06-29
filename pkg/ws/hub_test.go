@@ -10,35 +10,34 @@ import (
 
 var _ = Describe("hub", func() {
 	BeforeEach(func() {
-		ws.ResetHub()
+		ws.ResetHub_()
 	})
 
 	Describe("RegisterConn", func() {
 		It("adds a connection to connections list", func() {
 			conn := &ws.Conn{}
-			hub := ws.GetHub()
 
-			Expect(hub.Connections).To(HaveLen(0))
-			hub.RegisterConn <- conn
+			Expect(ws.HubConnections_()).To(HaveLen(0))
+			ws.RegisterConn_(conn)
 			runtime.Gosched()
 
-			Expect(hub.Connections).To(HaveLen(1))
-			Expect(hub.Connections[conn]).NotTo(BeNil())
+			Expect(ws.HubConnections_()).To(HaveLen(1))
+			Expect(ws.HubConnections_()[conn]).NotTo(BeNil())
 		})
 	})
 
 	Describe("UnregisterConn", func() {
 		It("removes a connection from connections list", func() {
 			conn := &ws.Conn{Send: make(chan []byte, 10)}
-			hub := ws.GetHub()
 
-			hub.RegisterConn <- conn
-			Expect(hub.Connections).To(HaveLen(1))
-			hub.UnregisterConn <- conn
+			ws.RegisterConn_(conn)
+			runtime.Gosched()
+			Expect(ws.HubConnections_()).To(HaveLen(1))
+
+			ws.UnregisterConn_(conn)
 			runtime.Gosched()
 
-			Expect(hub.Connections).To(HaveLen(0))
-			Expect(hub.Connections).NotTo(HaveKey(conn))
+			Expect(ws.HubConnections_()).To(HaveLen(0))
 			Expect(conn.Send).To(BeClosed())
 		})
 	})
@@ -47,22 +46,57 @@ var _ = Describe("hub", func() {
 		It("sends message to every connection", func() {
 			conn1 := &ws.Conn{Send: make(chan []byte, 10)}
 			conn2 := &ws.Conn{Send: make(chan []byte, 10)}
-			hub := ws.GetHub()
 
-			hub.RegisterConn <- conn1
-			hub.RegisterConn <- conn2
+			ws.RegisterConn_(conn1)
+			ws.RegisterConn_(conn2)
 			runtime.Gosched()
 
 			Expect(conn1.Send).To(HaveLen(0))
 			Expect(conn2.Send).To(HaveLen(0))
 
-			hub.Broadcast <- []byte("foo")
+			ws.Broadcast([]byte("foo"))
 			runtime.Gosched()
 
 			Expect(conn1.Send).To(HaveLen(1))
 			Expect(conn2.Send).To(HaveLen(1))
 			Expect(<-conn1.Send).To(Equal([]byte("foo")))
 			Expect(<-conn2.Send).To(Equal([]byte("foo")))
+		})
+	})
+
+	Describe("RegisterHandler", func() {
+		It("registers a message handler", func() {
+			handlerCalled := false
+			handler := func(data []byte, reply chan []byte) {
+				handlerCalled = true
+			}
+
+			Expect(ws.HubHandlers_()).To(HaveLen(0))
+
+			ws.RegisterHandler("foo", handler)
+			runtime.Gosched()
+
+			Expect(ws.HubHandlers_()).To(HaveLen(1))
+			Expect(handlerCalled).To(BeFalse())
+			ws.HubHandlers_()["foo"](nil, nil)
+			Expect(handlerCalled).To(BeTrue())
+		})
+	})
+
+	Describe("UnregisterHandler", func() {
+		It("unregisters a message handler", func() {
+			handler := func(data []byte, reply chan []byte) {}
+
+			Expect(ws.HubHandlers_()).To(HaveLen(0))
+
+			ws.RegisterHandler("foo", handler)
+			runtime.Gosched()
+			Expect(ws.HubHandlers_()).To(HaveLen(1))
+
+			ws.UnregisterHandler("foo")
+			runtime.Gosched()
+
+			Expect(ws.HubHandlers_()).To(HaveLen(0))
 		})
 	})
 })

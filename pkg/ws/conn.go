@@ -47,7 +47,7 @@ func (c *Conn) write(mt int, payload []byte) error {
 
 func (c *Conn) readPump() {
 	defer func() {
-		hub.UnregisterConn <- c
+		hub.unregisterConn <- c
 		c.Ws.Close()
 	}()
 	c.Ws.SetReadDeadline(time.Now().Add(pongWait))
