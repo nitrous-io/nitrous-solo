@@ -34,6 +34,7 @@ func Draw(r *gin.Engine, appDir string) {
 	ws.RegisterHandler("fs.read", fs.Read)
 	ws.RegisterHandler("fs.watch", fs.Watch)
 	ws.RegisterHandler("fs.unwatch", fs.Unwatch)
+	ws.RegisterHandler("fs.find-content", fs.FindContent)
 
 	ws.RegisterHandler("sh.start", sh.Start)
 	ws.RegisterHandler("sh.attach", sh.Attach)

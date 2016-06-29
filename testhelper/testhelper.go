@@ -5,8 +5,13 @@ import (
 	"io"
 	"reflect"
 
+	"github.com/Sirupsen/logrus"
 	. "github.com/onsi/gomega"
 )
+
+func init() {
+	logrus.SetLevel(logrus.FatalLevel)
+}
 
 type H map[string]interface{}
 type A []interface{}
