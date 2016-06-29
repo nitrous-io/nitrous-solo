@@ -1,41 +1,49 @@
 package ws
 
-type Hub struct {
-	connections map[*Conn]struct{}
-	broadcast   chan []byte
-	register    chan *Conn
-	unregister  chan *Conn
+var hub *hubType
+
+func init() {
+	hub = newHub()
+	go hub.run()
 }
 
-var hub = Hub{
-	broadcast:   make(chan []byte),
-	register:    make(chan *Conn),
-	unregister:  make(chan *Conn),
-	connections: make(map[*Conn]struct{}),
+type hubType struct {
+	Connections    map[*Conn]struct{}
+	Broadcast      chan []byte
+	RegisterConn   chan *Conn
+	UnregisterConn chan *Conn
+	Stop           chan struct{}
 }
 
-func (h *Hub) run() {
+func newHub() *hubType {
+	return &hubType{
+		Connections:    make(map[*Conn]struct{}),
+		Broadcast:      make(chan []byte),
+		RegisterConn:   make(chan *Conn),
+		UnregisterConn: make(chan *Conn),
+		Stop:           make(chan struct{}),
+	}
+}
+
+func (h *hubType) run() {
 	for {
 		select {
-		case conn := <-h.register:
-			h.connections[conn] = struct{}{}
+		case c := <-h.RegisterConn:
+			h.Connections[c] = struct{}{}
 
-		case conn := <-h.unregister:
-			if _, ok := h.connections[conn]; ok {
-				delete(h.connections, conn)
-				close(conn.send)
+		case c := <-h.UnregisterConn:
+			if _, ok := h.Connections[c]; ok {
+				delete(h.Connections, c)
+				close(c.Send)
 			}
 
-		case message := <-h.broadcast:
-			for conn := range h.connections {
-				select {
-				case conn.send <- message:
-
-				default:
-					close(conn.send)
-					delete(hub.connections, conn)
-				}
+		case message := <-h.Broadcast:
+			for c := range h.Connections {
+				c.Send <- message
 			}
+
+		case <-h.Stop:
+			return
 		}
 	}
 }

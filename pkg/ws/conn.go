@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -18,42 +19,52 @@ const (
 var upgrader = websocket.Upgrader{}
 
 type Conn struct {
-	ws   *websocket.Conn
-	send chan []byte
-	id   string
+	Ws   *websocket.Conn
+	Send chan []byte
+	ID   string
 }
 
 func newConn(ws *websocket.Conn) *Conn {
 	c := &Conn{
-		send: make(chan []byte, 256),
-		ws:   ws,
-		id:   uuid.NewV4().String(),
+		Send: make(chan []byte, 256),
+		Ws:   ws,
+		ID:   uuid.NewV4().String(),
 	}
-	c.send <- []byte("hello|" + c.id)
+	c.Send <- []byte("hello|" + c.ID)
 	return c
+}
+
+func (c *Conn) handleMessage(msg string) {
+	if strings.HasPrefix(msg, "m|") {
+	}
+	return
+}
+
+func (c *Conn) write(mt int, payload []byte) error {
+	c.Ws.SetWriteDeadline(time.Now().Add(writeWait))
+	return c.Ws.WriteMessage(mt, payload)
 }
 
 func (c *Conn) readPump() {
 	defer func() {
-		hub.unregister <- c
-		c.ws.Close()
+		hub.UnregisterConn <- c
+		c.Ws.Close()
 	}()
-	c.ws.SetReadDeadline(time.Now().Add(pongWait))
-	c.ws.SetPongHandler(func(string) error { c.ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	c.Ws.SetReadDeadline(time.Now().Add(pongWait))
+	c.Ws.SetPongHandler(func(string) error { c.Ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, _ /*message*/, err := c.ws.ReadMessage()
+		msgType, rawMsg, err := c.Ws.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				logrus.Warn("Unexpected ws close:", err)
 			}
 			break
 		}
-	}
-}
 
-func (c *Conn) write(mt int, payload []byte) error {
-	c.ws.SetWriteDeadline(time.Now().Add(writeWait))
-	return c.ws.WriteMessage(mt, payload)
+		if msgType == websocket.TextMessage {
+			c.handleMessage(string(rawMsg))
+		}
+	}
 }
 
 func (c *Conn) writePump() {
@@ -63,20 +74,20 @@ func (c *Conn) writePump() {
 	defer func() {
 		pingTimer.Stop()
 		heartbeatTimer.Stop()
-		c.ws.Close()
+		c.Ws.Close()
 	}()
 
 	for {
 		select {
-		case message, ok := <-c.send:
+		case message, ok := <-c.Send:
 			{
 				if !ok {
 					c.write(websocket.CloseMessage, []byte{})
 					return
 				}
 
-				c.ws.SetWriteDeadline(time.Now().Add(writeWait))
-				w, err := c.ws.NextWriter(websocket.TextMessage)
+				c.Ws.SetWriteDeadline(time.Now().Add(writeWait))
+				w, err := c.Ws.NextWriter(websocket.TextMessage)
 				if err != nil {
 					return
 				}
@@ -96,7 +107,7 @@ func (c *Conn) writePump() {
 
 		case <-heartbeatTimer.C:
 			{
-				c.send <- []byte("h")
+				c.Send <- []byte("h")
 			}
 		}
 	}

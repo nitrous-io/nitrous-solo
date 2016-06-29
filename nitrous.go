@@ -6,7 +6,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 	"github.com/kardianos/osext"
-	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 	"github.com/nitrous-io/nitrous-solo/server"
 )
 
@@ -18,7 +17,6 @@ func main() {
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	go ws.RunHub()
 	r := server.New(appDir)
 	r.Run(":3000")
 }
