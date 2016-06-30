@@ -1,5 +1,9 @@
+import util from './util';
+
 const WebSocket = window.WebSocket,
       HEARTBEAT_INTERVAL = 25000;
+
+let nextMsgId = 0;
 
 class Socket {
   constructor(url) {
@@ -10,6 +14,7 @@ class Socket {
     this._retries = 0;
     this._reconnectTimer = null;
     this._id = null;
+    this._callbacks = {};
   }
 
   open() {
@@ -32,9 +37,14 @@ class Socket {
     return;
   }
 
-  send(data) {
+  send(msgName, data, callback/*function(msgName, data, done)*/) {
     if (this._ws) {
-      return this._ws.send(data);
+      const msgId = nextMsgId++;
+      if (typeof callback === "function") {
+        this._callbacks[msgId] = callback;
+      }
+      this._ws.send(`m|${msgName}|${msgId}|${data || ''}`);
+      return;
     }
     return;
   }
@@ -72,10 +82,12 @@ class Socket {
     this._retries++;
   }
 
-  _onopen(e) {
+  _onopen() {
     this._retries = 0;
     this._heartbeatTimer = window.setInterval(() => {
-      this.send('h');
+      if (this._ws) {
+        return this._ws.send('h');
+      }
     }, HEARTBEAT_INTERVAL);
   }
 
@@ -102,22 +114,34 @@ class Socket {
     if (msg) {
       var i = msg.indexOf("|");
       if (i !== -1) {
-        const cmd = msg.substring(0, i),
-              data = msg.substring(i+1);
+        const [hdr, body] = util.splitN(msg, '|', 2);
 
-        if (cmd === 'reg') {
-          this._id = data;
+        if (hdr === 'reg') {
+          this._id = body;
 
           if (typeof this.onopen === 'function') {
-            this.onopen(e);
+            this.onopen();
           }
-          return
+          return;
+        }
+
+        if (hdr === 'm') {
+          // message format: m|msgName|msgID?|data
+
+          const [msgName, msgId, data] = util.splitN(body, '|', 3);
+
+          if (typeof this.onmessage === 'function') {
+            this.onmessage(msgName, msgId, data);
+          }
+
+          const callback = this._callbacks[msgId];
+          if (typeof callback === 'function') {
+            callback(msgName, data, () => {
+              this._callbacks[msgId] = null;
+            });
+          }
         }
       }
-    }
-
-    if (typeof this.onmessage === 'function') {
-      this.onmessage(e);
     }
   }
 
