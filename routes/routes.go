@@ -35,6 +35,7 @@ func Draw(r *gin.Engine, appDir string) {
 		ar := r.Group("", middleware.VerifyToken)
 		ar.GET("/user", user.Show)
 		ar.POST("/files/upload", files.Upload)
+		ar.GET("/files/download", files.Download)
 	}
 
 	ws.RegisterHandler("ping", ping_.Ping)
