@@ -1,7 +1,9 @@
 package files_test
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -310,6 +312,181 @@ var _ = Describe("files", func() {
 				Expect(b.String()).To(MatchJSON(`{
 					"error": "invalid_token",
 					"error_description": "access token is invalid"
+				}`))
+			})
+		})
+	})
+
+	Describe("Download", func() {
+		var (
+			filePath string
+			dir      string
+			err      error
+			headers  http.Header
+		)
+
+		doRequest := func(path string) {
+			req, err := http.NewRequest("GET", s.URL+"/files?token="+tok+"&path="+path, nil)
+			Expect(err).To(BeNil())
+
+			res, err = http.DefaultClient.Do(req)
+			Expect(err).To(BeNil())
+		}
+
+		BeforeEach(func() {
+			dir, err = ioutil.TempDir("", "")
+			Expect(err).To(BeNil())
+
+			filePath = filepath.Join(dir, "hello.txt")
+			Expect(ioutil.WriteFile(filePath, []byte("hello"), 0644)).To(BeNil())
+
+			headers = http.Header{
+				"Authorization": {"Token " + tok},
+			}
+		})
+
+		AfterEach(func() {
+			os.RemoveAll(dir)
+		})
+
+		It("returns 200 OK with the file", func() {
+			doRequest(filePath)
+
+			Expect(res.StatusCode).To(Equal(http.StatusOK))
+			Expect(res.Header.Get("Content-Disposition")).To(Equal("attachment; filename=hello.txt"))
+			Expect(res.Header.Get("Content-Type")).To(Equal("text/plain; charset=utf-8"))
+
+			b := &bytes.Buffer{}
+			_, err = b.ReadFrom(res.Body)
+			Expect(err).To(BeNil())
+			Expect(b.Bytes()).To(Equal([]byte(`hello`)))
+		})
+
+		Context("the path is directory", func() {
+			BeforeEach(func() {
+				otherFile := filepath.Join(dir, "world.txt")
+				Expect(ioutil.WriteFile(otherFile, []byte("world"), 0644)).To(BeNil())
+
+				otherDir := filepath.Join(dir, "foo")
+				Expect(os.Mkdir(otherDir, 0777)).To(BeNil())
+
+				fileInDir := filepath.Join(otherDir, "bar.txt")
+				Expect(ioutil.WriteFile(fileInDir, []byte("qux"), 0644)).To(BeNil())
+			})
+
+			It("returns 200 OK with tar-gzip file", func() {
+				doRequest(dir)
+
+				Expect(res.StatusCode).To(Equal(http.StatusOK))
+				Expect(res.Header.Get("Content-Disposition")).To(Equal("attachment; filename=" + filepath.Base(dir) + ".tar.gz"))
+				Expect(res.Header.Get("Content-Type")).To(Equal("application/x-gzip"))
+				Expect(res.Header.Get("Content-Transfer-Encoding")).To(Equal("binary"))
+
+				gr, err := gzip.NewReader(res.Body)
+				Expect(err).To(BeNil())
+				defer gr.Close()
+
+				tr := tar.NewReader(gr)
+				b := make([]byte, 10)
+
+				var files = []struct {
+					path    string
+					content []byte
+				}{
+					{"foo/bar.txt", []byte(`qux`)},
+					{"hello.txt", []byte(`hello`)},
+					{"world.txt", []byte(`world`)},
+				}
+
+				for _, f := range files {
+					hdr, err := tr.Next()
+					Expect(err).To(BeNil())
+					Expect(hdr.Name).To(Equal(f.path))
+
+					n, err := tr.Read(b)
+					Expect(err).To(BeNil())
+					Expect(b[:n]).To(Equal(f.content))
+				}
+			})
+		})
+
+		Context("when the file does not exist", func() {
+			It("returns 422 with invalid_params", func() {
+				doRequest("nowhere")
+
+				b := &bytes.Buffer{}
+				_, err = b.ReadFrom(res.Body)
+				Expect(err).To(BeNil())
+
+				Expect(res.StatusCode).To(Equal(422))
+				Expect(b.String()).To(MatchJSON(`{
+					"error": "invalid_params",
+					"errors": {
+						"path": "could not be found"
+					}
+				}`))
+			})
+		})
+
+		Context("when path is missing", func() {
+			It("returns 422 with invalid_params", func() {
+				doRequest("")
+
+				b := &bytes.Buffer{}
+				_, err = b.ReadFrom(res.Body)
+				Expect(err).To(BeNil())
+
+				Expect(res.StatusCode).To(Equal(422))
+				Expect(b.String()).To(MatchJSON(`{
+					"error": "invalid_params",
+					"errors": {
+						"path": "is required"
+					}
+				}`))
+			})
+		})
+
+		Context("when token is missing", func() {
+			BeforeEach(func() {
+				tok = ""
+			})
+
+			It("returns 422 with invalid_params", func() {
+				doRequest(dir)
+
+				b := &bytes.Buffer{}
+				_, err = b.ReadFrom(res.Body)
+				Expect(err).To(BeNil())
+
+				Expect(res.StatusCode).To(Equal(422))
+				Expect(b.String()).To(MatchJSON(`{
+					"error": "invalid_params",
+					"errors": {
+						"token": "is required"
+					}
+				}`))
+			})
+		})
+
+		Context("when token is wrong", func() {
+			BeforeEach(func() {
+				tok, err = token.GenerateTokenString("foobarqux")
+				Expect(err).To(BeNil())
+			})
+
+			It("returns 422 with invalid_token", func() {
+				doRequest(dir)
+
+				b := &bytes.Buffer{}
+				_, err = b.ReadFrom(res.Body)
+				Expect(err).To(BeNil())
+
+				Expect(res.StatusCode).To(Equal(422))
+				Expect(b.String()).To(MatchJSON(`{
+					"error": "invalid_credentials",
+					"errors": {
+						"token": "is invalid"
+					}
 				}`))
 			})
 		})

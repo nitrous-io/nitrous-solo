@@ -28,8 +28,11 @@ func Draw(r *gin.Engine, appDir string) {
 	r.Static("/assets", filepath.Join(appDir, "assets"))
 	r.GET("/ping", ping.Ping)
 
-	r.GET("/socket", socket.Socket)
 	r.POST("/token", auth.CreateToken)
+
+	// routes requiring "token" query param
+	r.GET("/socket", socket.Socket)
+	r.GET("/files", files.Download)
 
 	{ // routes requiring authentication
 		ar := r.Group("", middleware.VerifyToken)
