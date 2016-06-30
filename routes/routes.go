@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nitrous-io/nitrous-solo/controllers/auth"
+	"github.com/nitrous-io/nitrous-solo/controllers/files"
 	"github.com/nitrous-io/nitrous-solo/controllers/ping"
 	"github.com/nitrous-io/nitrous-solo/controllers/root"
 	"github.com/nitrous-io/nitrous-solo/controllers/socket"
@@ -27,12 +28,13 @@ func Draw(r *gin.Engine, appDir string) {
 	r.Static("/assets", filepath.Join(appDir, "assets"))
 	r.GET("/ping", ping.Ping)
 
-	r.POST("/token", auth.CreateToken)
 	r.GET("/socket", socket.Socket)
+	r.POST("/token", auth.CreateToken)
 
 	{ // routes requiring authentication
 		ar := r.Group("", middleware.VerifyToken)
 		ar.GET("/user", user.Show)
+		ar.POST("/files/upload", files.Upload)
 	}
 
 	ws.RegisterHandler("ping", ping_.Ping)
