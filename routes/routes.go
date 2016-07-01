@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
@@ -10,7 +9,8 @@ import (
 	"github.com/nitrous-io/nitrous-solo/controllers/socket"
 	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 
-	pinghandler "github.com/nitrous-io/nitrous-solo/handlers/ping"
+	"github.com/nitrous-io/nitrous-solo/handlers/fs"
+	ping_ "github.com/nitrous-io/nitrous-solo/handlers/ping"
 )
 
 func Draw(r *gin.Engine, appDir string) {
@@ -20,11 +20,11 @@ func Draw(r *gin.Engine, appDir string) {
 	}
 
 	r.GET("/", root.Index)
-	fmt.Println(filepath.Join(appDir, "assets"))
 	r.Static("/assets", filepath.Join(appDir, "assets"))
 	r.GET("/ping", ping.Ping)
 
 	r.GET("/socket", socket.Socket)
 
-	ws.RegisterHandler("ping", pinghandler.Ping)
+	ws.RegisterHandler("ping", ping_.Ping)
+	ws.RegisterHandler("fs.ls", fs.List)
 }
