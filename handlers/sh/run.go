@@ -1,0 +1,92 @@
+package sh
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"os/exec"
+	"os/user"
+	"strconv"
+	"syscall"
+
+	. "github.com/nitrous-io/nitrous-solo/handlers"
+)
+
+var executor Executor = &StdExecutor{}
+
+type Request struct {
+	Cmd   string   `json:"cmd"`
+	Args  []string `json:"args"`
+	RunAs string   `json:"run_as"`
+	Dir   string   `json:"dir"`
+}
+
+func Run(name string, data []byte, reply func([]byte)) {
+	if len(data) == 0 {
+		reply([]byte(""))
+		return
+	}
+
+	var req Request
+	if err := json.Unmarshal(data, &req); err != nil {
+		ReplyJSON(H{"error": "invalid_json"}, reply)
+		return
+	}
+
+	if req.Cmd == "" || req.RunAs == "" {
+		ReplyJSON(H{"error": "invalid_params"}, reply)
+		return
+	}
+
+	cmd := executor.Command(req.Cmd, req.Args...)
+	cmd.Dir = req.Dir
+
+	usr, err := user.Lookup(req.RunAs)
+	if err != nil {
+		ReplyJSON(H{"error": "unknown user"}, reply)
+		return
+	}
+
+	uid, err := strconv.ParseInt(usr.Uid, 10, 32)
+	if err != nil {
+		ReplyJSON(H{"error": "unknown user"}, reply)
+		return
+	}
+
+	gid, err := strconv.ParseInt(usr.Gid, 10, 32)
+	if err != nil {
+		ReplyJSON(H{"error": "unknown user"}, reply)
+		return
+	}
+
+	// Run command as the given user. This will not work unless the user running
+	// this process has setuid/setgid privileges.
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Credential: &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid)},
+	}
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	output, err := cmd.Output()
+	res := H{
+		"stdout":    string(output), // Do we need base64-encode stdout/stderr over a WebSocket?
+		"stderr":    stderr.String(),
+		"exit_code": 0,
+	}
+	if err != nil {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+				res["exit_code"] = status.ExitStatus()
+
+				ReplyJSON(res, reply)
+				return
+			}
+		}
+
+		ReplyJSON(H{"error": fmt.Sprintf("error running command: %v", err)}, reply)
+		return
+	}
+
+	ReplyJSON(res, reply)
+}

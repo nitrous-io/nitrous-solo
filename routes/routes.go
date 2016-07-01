@@ -42,4 +42,5 @@ func Draw(r *gin.Engine, appDir string) {
 	ws.RegisterHandler("sh.r", sh.Resize)
 	ws.RegisterHandler("sh.kill", sh.Kill)
 	ws.RegisterHandler("sh.list", sh.List)
+	ws.RegisterHandler("sh.run", sh.Run)
 }
