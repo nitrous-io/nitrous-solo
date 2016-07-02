@@ -18,5 +18,10 @@ func main() {
 		logrus.Fatal(err)
 	}
 	r := server.New(appDir)
-	r.Run(":3000")
+
+	addr := os.Getenv("LISTEN_ADDR")
+	if addr == "" {
+		addr = ":3000"
+	}
+	r.Run(addr)
 }

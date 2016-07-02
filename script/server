@@ -5,6 +5,8 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export NITROUS_ENV=${NITROUS_ENV:-"development"}
 BUILD_DIR="build/$NITROUS_ENV"
 
+export LISTEN_ADDR=${LISTEN_ADDR:-"127.0.0.1:3000"}
+
 cd $DIR/..
 script/build-server
 script/build-ide
