@@ -69,5 +69,4 @@ func List(name string, data []byte, reply func([]byte)) {
 	}
 
 	ReplyJSON(H{"files": files}, reply)
-	return
 }

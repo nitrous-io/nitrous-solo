@@ -27,4 +27,5 @@ func Draw(r *gin.Engine, appDir string) {
 
 	ws.RegisterHandler("ping", ping_.Ping)
 	ws.RegisterHandler("fs.ls", fs.List)
+	ws.RegisterHandler("fs.read", fs.Read)
 }
