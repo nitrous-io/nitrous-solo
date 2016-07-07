@@ -23,6 +23,7 @@ type shellHubType struct {
 	detach  chan detachParams
 	input   chan shellInput
 	publish chan shellOutput
+	resize  chan resizeParams
 	finish  chan string // shellSessionID
 
 	stop chan struct{}
@@ -38,6 +39,7 @@ func newShellHub() *shellHubType {
 		detach:  make(chan detachParams, 256),
 		input:   make(chan shellInput, 256),
 		publish: make(chan shellOutput, 256),
+		resize:  make(chan resizeParams, 256),
 		finish:  make(chan string, 256),
 
 		stop: make(chan struct{}),
@@ -81,6 +83,13 @@ func (h *shellHubType) run() {
 				sess.pty.Write(s.data)
 			}
 
+		case p := <-h.resize:
+			if sess, ok := h.sessions[p.shellSessionID]; ok {
+				if sess.pty != nil {
+					pty.Setsize(sess.pty, uint16(p.rows), uint16(p.cols))
+				}
+			}
+
 		case s := <-h.publish:
 			if subs, ok := h.subscriptions[s.shellSessionID]; ok {
 				for _, sub := range subs {
@@ -110,6 +119,7 @@ func (h *shellHubType) run() {
 			close(h.detach)
 			close(h.input)
 			close(h.publish)
+			close(h.resize)
 			close(h.finish)
 			close(h.stop)
 

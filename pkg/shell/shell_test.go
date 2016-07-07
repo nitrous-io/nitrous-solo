@@ -191,4 +191,28 @@ var _ = Describe("pkg/shell", func() {
 			Expect(string(res)).To(ContainSubstring("hello"))
 		})
 	})
+
+	Describe("Resize", func() {
+		var sessID string
+
+		BeforeEach(func() {
+			var err error
+			_, sessID, err = StartShellSessionAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			Expect(err).To(BeNil())
+			Expect(sessID).NotTo(BeEmpty())
+		})
+
+		It("resizes the shell session's pseudo terminal", func() {
+			Tick()
+
+			Resize(sessID, 200, 80)
+			Tick()
+
+			Expect(hub.sessions).To(HaveKey(sessID))
+			rows, cols, err := pty.Getsize(hub.sessions[sessID].pty)
+			Expect(err).To(BeNil())
+			Expect(cols).To(Equal(200))
+			Expect(rows).To(Equal(80))
+		})
+	})
 })
