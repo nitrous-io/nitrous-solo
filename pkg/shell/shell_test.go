@@ -245,4 +245,29 @@ var _ = Describe("pkg/shell", func() {
 			Expect(hub.subscriptions).To(HaveLen(0))
 		})
 	})
+
+	Describe("List", func() {
+		var sessID, sess2ID string
+
+		BeforeEach(func() {
+			var err error
+			_, sessID, err = StartShellSessionAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			Expect(err).To(BeNil())
+			_, sess2ID, err = StartShellSessionAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			Expect(err).To(BeNil())
+		})
+
+		It("returns a list of shell session IDs", func() {
+			Tick()
+			Expect(hub.sessions).To(HaveLen(2))
+
+			List(cb)
+			Tick()
+
+			Expect(res).NotTo(HaveLen(0))
+			var j []string
+			Expect(json.Unmarshal(res, &j)).To(BeNil())
+			Expect(j).To(ConsistOf(sessID, sess2ID))
+		})
+	})
 })

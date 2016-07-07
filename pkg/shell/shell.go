@@ -92,3 +92,7 @@ func Resize(shellSessionID string, cols, rows uint) {
 func Kill(shellSessionID string) {
 	hub.kill <- shellSessionID
 }
+
+func List(reply func([]byte)) {
+	hub.list <- reply
+}

@@ -14,6 +14,8 @@ func init() {
 	go hub.run()
 }
 
+type replyFunc func([]byte)
+
 type shellHubType struct {
 	sessions      map[string]*shellSession           // <shellSessionID, *shellSession>
 	subscriptions map[string]map[string]subscription // <shellSessionID, <subscriptionID, subscription>
@@ -26,6 +28,7 @@ type shellHubType struct {
 	resize  chan resizeParams
 	kill    chan string // shellSessionID
 	finish  chan string // shellSessionID
+	list    chan replyFunc
 
 	stop chan struct{}
 }
@@ -35,14 +38,15 @@ func newShellHub() *shellHubType {
 		sessions:      map[string]*shellSession{},
 		subscriptions: map[string]map[string]subscription{},
 
-		new:     make(chan *shellSession, 256),
-		attach:  make(chan attachParams, 256),
-		detach:  make(chan detachParams, 256),
-		input:   make(chan shellInput, 256),
-		publish: make(chan shellOutput, 256),
-		resize:  make(chan resizeParams, 256),
-		kill:    make(chan string, 256),
-		finish:  make(chan string, 256),
+		new:     make(chan *shellSession, chanBufSize),
+		attach:  make(chan attachParams, chanBufSize),
+		detach:  make(chan detachParams, chanBufSize),
+		input:   make(chan shellInput, chanBufSize),
+		publish: make(chan shellOutput, chanBufSize),
+		resize:  make(chan resizeParams, chanBufSize),
+		kill:    make(chan string, chanBufSize),
+		finish:  make(chan string, chanBufSize),
+		list:    make(chan replyFunc, chanBufSize),
 
 		stop: make(chan struct{}),
 	}
@@ -122,6 +126,17 @@ func (h *shellHubType) run() {
 			delete(h.sessions, shellSessionID)
 			delete(h.subscriptions, shellSessionID)
 
+		case reply := <-h.list:
+			sessIDs := make([]string, len(h.sessions))
+			i := 0
+			for sessID := range h.sessions {
+				sessIDs[i] = sessID
+				i++
+			}
+			if b, err := json.Marshal(sessIDs); err == nil {
+				reply(b)
+			}
+
 		case <-h.stop:
 			close(h.new)
 			close(h.attach)
@@ -131,6 +146,7 @@ func (h *shellHubType) run() {
 			close(h.resize)
 			close(h.kill)
 			close(h.finish)
+			close(h.list)
 			close(h.stop)
 
 			for _, sess := range h.sessions {
