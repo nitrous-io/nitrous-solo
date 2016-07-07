@@ -7,7 +7,10 @@ import (
 	"github.com/nitrous-io/pty"
 )
 
-var hub *shellHubType
+var (
+	hub         *shellHubType
+	chanBufSize = 256
+)
 
 func init() {
 	hub = newShellHub()

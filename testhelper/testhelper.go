@@ -18,5 +18,5 @@ func EncodeJSON(h map[string]interface{}) []byte {
 
 func Tick() {
 	runtime.Gosched()
-	time.Sleep(30 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 }

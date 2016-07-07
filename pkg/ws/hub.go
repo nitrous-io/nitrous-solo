@@ -2,7 +2,10 @@ package ws
 
 import "bytes"
 
-var hub *hubType
+var (
+	hub         *hubType
+	chanBufSize = 256
+)
 
 func init() {
 	hub = newHub()
@@ -29,13 +32,13 @@ func newHub() *hubType {
 		connections: map[string]*conn{},
 		handlers:    map[string]MessageHandlerFunc{},
 
-		send:              make(chan message, 256),
-		broadcast:         make(chan message, 256),
+		send:              make(chan message, chanBufSize),
+		broadcast:         make(chan message, chanBufSize),
 		registerConn:      make(chan *conn),
 		unregisterConn:    make(chan *conn),
 		registerHandler:   make(chan messageHandler),
 		unregisterHandler: make(chan string),
-		handleMessage:     make(chan message, 256),
+		handleMessage:     make(chan message, chanBufSize),
 
 		stop: make(chan struct{}),
 	}
