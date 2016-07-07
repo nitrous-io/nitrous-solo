@@ -19,6 +19,12 @@ type detachParams struct {
 	shellSessionID string
 }
 
+type resizeParams struct {
+	shellSessionID string
+	cols           uint
+	rows           uint
+}
+
 func newSubscription(shellSessionID string, reply func([]byte)) subscription {
 	return subscription{
 		id:             uuid.NewV4().String(),
@@ -72,5 +78,13 @@ func Input(shellSessionID string, data []byte) {
 	hub.input <- shellInput{
 		shellSessionID: shellSessionID,
 		data:           data,
+	}
+}
+
+func Resize(shellSessionID string, cols, rows uint) {
+	hub.resize <- resizeParams{
+		shellSessionID: shellSessionID,
+		cols:           cols,
+		rows:           rows,
 	}
 }
