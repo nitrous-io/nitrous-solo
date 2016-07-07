@@ -1,7 +1,7 @@
 import './css/app.sass';
 import Socket from './socket';
 
-window.conn = new Socket(`${location.protocol.replace("http", "ws")}//${location.host}/socket`);
+const conn = window.conn = new Socket(`${location.protocol.replace("http", "ws")}//${location.host}/socket`);
 
 conn.onopen = function() {
   console.log('connection open', conn.id);

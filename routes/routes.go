@@ -11,6 +11,7 @@ import (
 
 	"github.com/nitrous-io/nitrous-solo/handlers/fs"
 	ping_ "github.com/nitrous-io/nitrous-solo/handlers/ping"
+	"github.com/nitrous-io/nitrous-solo/handlers/shell"
 )
 
 func Draw(r *gin.Engine, appDir string) {
@@ -28,4 +29,9 @@ func Draw(r *gin.Engine, appDir string) {
 	ws.RegisterHandler("ping", ping_.Ping)
 	ws.RegisterHandler("fs.ls", fs.List)
 	ws.RegisterHandler("fs.read", fs.Read)
+
+	ws.RegisterHandler("sh.s", shell.Start) // short name because many replies will happen
+	ws.RegisterHandler("sh.a", shell.Attach)
+	ws.RegisterHandler("sh.detach", shell.Detach)
+	ws.RegisterHandler("sh.i", shell.Input)
 }
