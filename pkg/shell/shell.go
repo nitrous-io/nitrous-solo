@@ -88,3 +88,7 @@ func Resize(shellSessionID string, cols, rows uint) {
 		rows:           rows,
 	}
 }
+
+func Kill(shellSessionID string) {
+	hub.kill <- shellSessionID
+}
