@@ -24,6 +24,7 @@ type shellHubType struct {
 	input   chan shellInput
 	publish chan shellOutput
 	resize  chan resizeParams
+	kill    chan string // shellSessionID
 	finish  chan string // shellSessionID
 
 	stop chan struct{}
@@ -40,6 +41,7 @@ func newShellHub() *shellHubType {
 		input:   make(chan shellInput, 256),
 		publish: make(chan shellOutput, 256),
 		resize:  make(chan resizeParams, 256),
+		kill:    make(chan string, 256),
 		finish:  make(chan string, 256),
 
 		stop: make(chan struct{}),
@@ -109,6 +111,13 @@ func (h *shellHubType) run() {
 				}
 			}
 
+		case shellSessionID := <-h.kill:
+			if sess, ok := h.sessions[shellSessionID]; ok {
+				if sess.cmd != nil && sess.cmd.Process != nil {
+					sess.cmd.Process.Kill()
+				}
+			}
+
 		case shellSessionID := <-h.finish:
 			delete(h.sessions, shellSessionID)
 			delete(h.subscriptions, shellSessionID)
@@ -120,11 +129,14 @@ func (h *shellHubType) run() {
 			close(h.input)
 			close(h.publish)
 			close(h.resize)
+			close(h.kill)
 			close(h.finish)
 			close(h.stop)
 
 			for _, sess := range h.sessions {
-				sess.cmd.Process.Kill()
+				if sess.cmd != nil && sess.cmd.Process != nil {
+					sess.cmd.Process.Kill()
+				}
 			}
 			return // exit function
 		}

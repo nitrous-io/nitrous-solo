@@ -215,4 +215,34 @@ var _ = Describe("pkg/shell", func() {
 			Expect(rows).To(Equal(80))
 		})
 	})
+
+	Describe("Kill", func() {
+		var sessID string
+
+		BeforeEach(func() {
+			var err error
+			_, sessID, err = StartShellSessionAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			Expect(err).To(BeNil())
+			Expect(sessID).NotTo(BeEmpty())
+		})
+
+		It("kills the shell session's process", func() {
+			Tick()
+
+			Expect(hub.sessions).To(HaveLen(1))
+			Expect(hub.subscriptions).To(HaveLen(1))
+
+			Kill(sessID)
+			Tick()
+
+			Expect(res).NotTo(HaveLen(0))
+			var j []string
+			Expect(json.Unmarshal(res, &j)).To(BeNil())
+			Expect(j[0]).To(Equal("exit"))
+			Expect(string(j[1])).To(Equal("signal: killed"))
+
+			Expect(hub.sessions).To(HaveLen(0))
+			Expect(hub.subscriptions).To(HaveLen(0))
+		})
+	})
 })
