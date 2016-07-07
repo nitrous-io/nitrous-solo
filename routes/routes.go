@@ -33,6 +33,8 @@ func Draw(r *gin.Engine, appDir string) {
 	ws.RegisterHandler("fs.ls", fs.List)
 	ws.RegisterHandler("fs.read", fs.Read)
 	ws.RegisterHandler("fs.write", fs.Write)
+	ws.RegisterHandler("fs.watch", fs.Watch)
+	ws.RegisterHandler("fs.unwatch", fs.Unwatch)
 
 	ws.RegisterHandler("sh.start", sh.Start)
 	ws.RegisterHandler("sh.attach", sh.Attach)

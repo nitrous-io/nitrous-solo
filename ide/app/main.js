@@ -15,6 +15,10 @@ conn.onopen = function() {
     console.log(data);
     done();
   });
+
+  conn.send('fs.watch', JSON.stringify({ path: '/home/nitrous/code' }), function(msgName, data, done) {
+    console.log('fs.watch:', data);
+  });
 };
 
 conn.onclose = function(/*evt*/) {
