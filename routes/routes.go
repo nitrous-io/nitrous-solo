@@ -30,8 +30,12 @@ func Draw(r *gin.Engine, appDir string) {
 	ws.RegisterHandler("fs.ls", fs.List)
 	ws.RegisterHandler("fs.read", fs.Read)
 
-	ws.RegisterHandler("sh.s", shell.Start) // short name because many replies will happen
-	ws.RegisterHandler("sh.a", shell.Attach)
+	ws.RegisterHandler("sh.start", shell.Start)
+	ws.RegisterHandler("sh.attach", shell.Attach)
 	ws.RegisterHandler("sh.detach", shell.Detach)
+	// short names for messages that get sent repeatedly
 	ws.RegisterHandler("sh.i", shell.Input)
+	ws.RegisterHandler("sh.r", shell.Resize)
+	ws.RegisterHandler("sh.kill", shell.Kill)
+	ws.RegisterHandler("sh.list", shell.List)
 }

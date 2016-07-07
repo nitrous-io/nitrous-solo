@@ -120,29 +120,98 @@ func Detach(name string, data []byte, reply func([]byte)) {
 	}, reply)
 }
 
-func Input(name string, data []byte, _ func([]byte)) {
+func Input(name string, data []byte, reply func([]byte)) {
+	// this handler does not reply
+	if len(data) == 0 {
+		return
+	}
+
+	// [shellSessionID, base64-encoded-data]
+
+	var j []string
+	if err := json.Unmarshal(data, &j); err != nil {
+		return
+	}
+
+	if len(j) < 2 || j[0] == "" || j[1] == "" {
+		return
+	}
+
+	shellSessionID := j[0]
+	encodedData := j[1]
+
+	data, err := base64.StdEncoding.DecodeString(encodedData)
+	if err != nil {
+		return
+	}
+
+	shell.Input(shellSessionID, data)
+}
+
+func Resize(name string, data []byte, reply func([]byte)) {
+	// this handler does not reply
+	if len(data) == 0 {
+		return
+	}
+
+	// [shellSessionID, cols, rows]
+	var j []interface{}
+
+	if err := json.Unmarshal(data, &j); err != nil {
+		return
+	}
+
+	if len(j) < 3 {
+		return
+	}
+
+	shellSessionID, ok := j[0].(string)
+	if !ok {
+		return
+	}
+
+	cols, ok := j[1].(float64)
+	if !ok {
+		return
+	}
+
+	rows, ok := j[2].(float64)
+	if !ok {
+		return
+	}
+
+	if cols <= 6 {
+		cols = 6
+	}
+
+	if rows <= 2 {
+		rows = 2
+	}
+
+	shell.Resize(shellSessionID, uint(cols), uint(rows))
+}
+
+func Kill(name string, data []byte, reply func([]byte)) {
 	// this handler does not reply
 	if len(data) == 0 {
 		return
 	}
 
 	var j struct {
-		ShellSessionID string `json:"s"`
-		Data           string `json:"d"`
+		ShellSessionID string `json:"shell_session_id"`
 	}
 
 	if err := json.Unmarshal(data, &j); err != nil {
 		return
 	}
 
-	if j.ShellSessionID == "" || j.Data == "" {
+	if j.ShellSessionID == "" {
 		return
 	}
 
-	data, err := base64.StdEncoding.DecodeString(j.Data)
-	if err != nil {
-		return
-	}
+	shell.Kill(j.ShellSessionID)
+}
 
-	shell.Input(j.ShellSessionID, data)
+func List(name string, data []byte, reply func([]byte)) {
+	shell.List(reply)
 }
