@@ -26,8 +26,8 @@ type hubType struct {
 
 func newHub() *hubType {
 	return &hubType{
-		connections: make(map[string]*conn),
-		handlers:    make(map[string]MessageHandlerFunc),
+		connections: map[string]*conn{},
+		handlers:    map[string]MessageHandlerFunc{},
 
 		send:              make(chan message, 256),
 		broadcast:         make(chan message, 256),
@@ -95,7 +95,15 @@ func (h *hubType) run() {
 			}
 
 		case <-h.stop:
-			return
+			close(h.send)
+			close(h.broadcast)
+			close(h.registerConn)
+			close(h.unregisterConn)
+			close(h.registerHandler)
+			close(h.unregisterHandler)
+			close(h.handleMessage)
+			close(h.stop)
+			return // exit function
 		}
 	}
 }

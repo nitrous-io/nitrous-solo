@@ -1,16 +1,16 @@
 package ws
 
 import (
-	"runtime"
 	"testing"
 
+	. "github.com/nitrous-io/nitrous-solo/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ws")
+	RunSpecs(t, "pkg/ws")
 }
 
 func resetHub() {
@@ -19,7 +19,7 @@ func resetHub() {
 	go hub.run()
 }
 
-var _ = Describe("ws", func() {
+var _ = Describe("pkg/ws", func() {
 	BeforeEach(func() {
 		resetHub()
 	})
@@ -31,7 +31,7 @@ var _ = Describe("ws", func() {
 			Expect(hub.connections).To(HaveLen(0))
 
 			hub.registerConn <- conn
-			runtime.Gosched()
+			Tick()
 
 			Expect(hub.connections).To(HaveLen(1))
 			Expect(hub.connections[conn.id]).To(Equal(conn))
@@ -43,11 +43,11 @@ var _ = Describe("ws", func() {
 			conn := newConn(nil)
 
 			hub.registerConn <- conn
-			runtime.Gosched()
+			Tick()
 			Expect(hub.connections).To(HaveLen(1))
 
 			hub.unregisterConn <- conn
-			runtime.Gosched()
+			Tick()
 
 			Expect(hub.connections).To(HaveLen(0))
 			Expect(conn.send).To(BeClosed())
@@ -61,13 +61,13 @@ var _ = Describe("ws", func() {
 
 			hub.registerConn <- conn1
 			hub.registerConn <- conn2
-			runtime.Gosched()
+			Tick()
 
 			Expect(conn1.send).To(HaveLen(0))
 			Expect(conn2.send).To(HaveLen(0))
 
 			Send(conn1.id, "123", "foo", []byte("foobar777"))
-			runtime.Gosched()
+			Tick()
 
 			Expect(conn1.send).To(HaveLen(1))
 			Expect(conn2.send).To(HaveLen(0))
@@ -82,13 +82,13 @@ var _ = Describe("ws", func() {
 
 			hub.registerConn <- conn1
 			hub.registerConn <- conn2
-			runtime.Gosched()
+			Tick()
 
 			Expect(conn1.send).To(HaveLen(0))
 			Expect(conn2.send).To(HaveLen(0))
 
 			Broadcast("foo", []byte("foobar777"))
-			runtime.Gosched()
+			Tick()
 
 			Expect(conn1.send).To(HaveLen(1))
 			Expect(conn2.send).To(HaveLen(1))
@@ -107,7 +107,7 @@ var _ = Describe("ws", func() {
 			Expect(hub.handlers).To(HaveLen(0))
 
 			RegisterHandler("foo", handler)
-			runtime.Gosched()
+			Tick()
 
 			Expect(hub.handlers).To(HaveLen(1))
 			Expect(handlerCalled).To(BeFalse())
@@ -124,11 +124,11 @@ var _ = Describe("ws", func() {
 			Expect(hub.handlers).To(HaveLen(0))
 
 			RegisterHandler("foo", handler)
-			runtime.Gosched()
+			Tick()
 			Expect(hub.handlers).To(HaveLen(1))
 
 			UnregisterHandler("foo")
-			runtime.Gosched()
+			Tick()
 
 			Expect(hub.handlers).To(HaveLen(0))
 		})
@@ -163,10 +163,10 @@ var _ = Describe("ws", func() {
 			hub.registerConn <- conn2
 			RegisterHandler("foo", fooHandler)
 			RegisterHandler("bar", barHandler)
-			runtime.Gosched()
+			Tick()
 
 			parseAndHandleMessage(conn1, []byte("m|foo|123|foobar777"))
-			runtime.Gosched()
+			Tick()
 		})
 
 		It("calls a handler for the message name", func() {
@@ -185,7 +185,7 @@ var _ = Describe("ws", func() {
 			Expect(conn2.send).To(HaveLen(0))
 
 			fooHandlerCallArgs.reply([]byte("bazqux2016"))
-			runtime.Gosched()
+			Tick()
 
 			Expect(conn1.send).To(HaveLen(1))
 			Expect(conn2.send).To(HaveLen(0))
