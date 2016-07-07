@@ -15,6 +15,7 @@ func Test(t *testing.T) {
 
 func resetHub() {
 	hub.stop <- struct{}{}
+	chanBufSize = 0
 	hub = newHub()
 	go hub.run()
 }

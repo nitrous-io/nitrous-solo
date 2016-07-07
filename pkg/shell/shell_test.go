@@ -19,6 +19,7 @@ func Test(t *testing.T) {
 
 func resetHub() {
 	hub.stop <- struct{}{}
+	chanBufSize = 0
 	hub = newShellHub()
 	go hub.run()
 }
@@ -112,6 +113,7 @@ var _ = Describe("pkg/shell", func() {
 			Expect(subID).NotTo(Equal(sub2ID))
 
 			Tick()
+
 			Expect(hub.sessions).To(HaveLen(1))
 			rows, cols, err := pty.Getsize(hub.sessions[sessID].pty)
 			Expect(err).To(BeNil())
@@ -183,12 +185,12 @@ var _ = Describe("pkg/shell", func() {
 		It("writes to the shell session's stdin", func() {
 			Tick()
 
-			Input(sessID, []byte("hello\n"))
+			Input(sessID, []byte(":)\n"))
 
 			Tick()
 
 			Expect(res).NotTo(HaveLen(0))
-			Expect(string(res)).To(ContainSubstring("hello"))
+			Expect(string(res)).To(ContainSubstring(":)"))
 		})
 	})
 
