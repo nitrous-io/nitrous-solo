@@ -1,4 +1,4 @@
-package shell
+package sh
 
 import (
 	"encoding/base64"
@@ -6,6 +6,16 @@ import (
 
 	. "github.com/nitrous-io/nitrous-solo/handlers"
 	"github.com/nitrous-io/nitrous-solo/pkg/shell"
+)
+
+var (
+	ShellStartAndAttach = shell.StartAndAttach
+	ShellAttach         = shell.Attach
+	ShellDetach         = shell.Detach
+	ShellInput          = shell.Input
+	ShellResize         = shell.Resize
+	ShellKill           = shell.Kill
+	ShellList           = shell.List
 )
 
 func Start(name string, data []byte, reply func([]byte)) {
@@ -32,6 +42,10 @@ func Start(name string, data []byte, reply func([]byte)) {
 		return
 	}
 
+	if j.Args == nil {
+		j.Args = []string{}
+	}
+
 	if j.Cols <= 6 {
 		j.Cols = 6
 	}
@@ -40,7 +54,7 @@ func Start(name string, data []byte, reply func([]byte)) {
 		j.Rows = 2
 	}
 
-	subscriptionID, shellSessionID, err := shell.StartShellSessionAndAttach(j.Cmd, j.Args, j.RunAs, j.Cols, j.Rows, reply)
+	subscriptionID, shellSessionID, err := ShellStartAndAttach(j.Cmd, j.Args, j.RunAs, j.Cols, j.Rows, reply)
 	if err != nil {
 		ReplyJSON(H{
 			"error":             "failed_to_start_shell_session",
@@ -85,7 +99,7 @@ func Attach(name string, data []byte, reply func([]byte)) {
 		j.Rows = 2
 	}
 
-	subscriptionID := shell.Attach(j.ShellSessionID, j.Cols, j.Rows, reply)
+	subscriptionID := ShellAttach(j.ShellSessionID, j.Cols, j.Rows, reply)
 
 	ReplyJSON(H{
 		"subscription_id": subscriptionID,
@@ -113,7 +127,7 @@ func Detach(name string, data []byte, reply func([]byte)) {
 		return
 	}
 
-	shell.Detach(j.ShellSessionID, j.SubscriptionID)
+	ShellDetach(j.ShellSessionID, j.SubscriptionID)
 
 	ReplyJSON(H{
 		"detached": true,
@@ -145,7 +159,7 @@ func Input(name string, data []byte, reply func([]byte)) {
 		return
 	}
 
-	shell.Input(shellSessionID, data)
+	ShellInput(shellSessionID, data)
 }
 
 func Resize(name string, data []byte, reply func([]byte)) {
@@ -188,7 +202,7 @@ func Resize(name string, data []byte, reply func([]byte)) {
 		rows = 2
 	}
 
-	shell.Resize(shellSessionID, uint(cols), uint(rows))
+	ShellResize(shellSessionID, uint(cols), uint(rows))
 }
 
 func Kill(name string, data []byte, reply func([]byte)) {
@@ -209,9 +223,9 @@ func Kill(name string, data []byte, reply func([]byte)) {
 		return
 	}
 
-	shell.Kill(j.ShellSessionID)
+	ShellKill(j.ShellSessionID)
 }
 
 func List(name string, data []byte, reply func([]byte)) {
-	shell.List(reply)
+	ShellList(reply)
 }

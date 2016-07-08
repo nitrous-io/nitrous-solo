@@ -11,7 +11,7 @@ import (
 
 	"github.com/nitrous-io/nitrous-solo/handlers/fs"
 	ping_ "github.com/nitrous-io/nitrous-solo/handlers/ping"
-	"github.com/nitrous-io/nitrous-solo/handlers/shell"
+	"github.com/nitrous-io/nitrous-solo/handlers/sh"
 )
 
 func Draw(r *gin.Engine, appDir string) {
@@ -30,12 +30,12 @@ func Draw(r *gin.Engine, appDir string) {
 	ws.RegisterHandler("fs.ls", fs.List)
 	ws.RegisterHandler("fs.read", fs.Read)
 
-	ws.RegisterHandler("sh.start", shell.Start)
-	ws.RegisterHandler("sh.attach", shell.Attach)
-	ws.RegisterHandler("sh.detach", shell.Detach)
+	ws.RegisterHandler("sh.start", sh.Start)
+	ws.RegisterHandler("sh.attach", sh.Attach)
+	ws.RegisterHandler("sh.detach", sh.Detach)
 	// short names for messages that get sent repeatedly
-	ws.RegisterHandler("sh.i", shell.Input)
-	ws.RegisterHandler("sh.r", shell.Resize)
-	ws.RegisterHandler("sh.kill", shell.Kill)
-	ws.RegisterHandler("sh.list", shell.List)
+	ws.RegisterHandler("sh.i", sh.Input)
+	ws.RegisterHandler("sh.r", sh.Resize)
+	ws.RegisterHandler("sh.kill", sh.Kill)
+	ws.RegisterHandler("sh.list", sh.List)
 }
