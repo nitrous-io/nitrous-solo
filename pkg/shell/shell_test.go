@@ -52,27 +52,31 @@ var _ = Describe("pkg/shell", func() {
 				subID, sessID, err := StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
 				Expect(err).To(BeNil())
 
-				Tick()
-
-				Expect(hub.sessions).To(HaveKey(sessID))
+				Eventually(func() Any {
+					return hub.sessions
+				}).Should(HaveKey(sessID))
 				Expect(hub.sessions[sessID]).NotTo(BeNil())
-				rows, cols, err := pty.Getsize(hub.sessions[sessID].pty)
-				Expect(err).To(BeNil())
-				Expect(rows).To(Equal(25))
-				Expect(cols).To(Equal(80))
 
 				Expect(hub.subscriptions).To(HaveKey(sessID))
 				Expect(hub.subscriptions[sessID]).To(HaveLen(1))
 				Expect(hub.subscriptions[sessID]).To(HaveKey(subID))
 				Expect(hub.subscriptions[sessID][subID]).NotTo(BeNil())
 
-				Expect(res).NotTo(HaveLen(0))
+				Eventually(func() Any {
+					return res
+				}).ShouldNot(HaveLen(0))
+
 				var j []string
 				Expect(json.Unmarshal(res, &j)).To(BeNil())
 				Expect(j[0]).To(Equal("d"))
 				b, err := base64.StdEncoding.DecodeString(j[1])
 				Expect(err).To(BeNil())
 				Expect(string(b)).To(Equal("hello world"))
+
+				rows, cols, err := pty.Getsize(hub.sessions[sessID].pty)
+				Expect(err).To(BeNil())
+				Expect(rows).To(Equal(25))
+				Expect(cols).To(Equal(80))
 			})
 		})
 
@@ -82,9 +86,10 @@ var _ = Describe("pkg/shell", func() {
 				Expect(subID).To(BeEmpty())
 				Expect(sessID).To(BeEmpty())
 				Expect(err).NotTo(BeNil())
-				Tick()
 
-				Expect(hub.sessions).To(HaveLen(0))
+				Eventually(func() Any {
+					return hub.sessions
+				}).Should(HaveLen(0))
 				Expect(hub.subscriptions).To(HaveLen(0))
 				Expect(res).To(HaveLen(0))
 			})
@@ -103,6 +108,10 @@ var _ = Describe("pkg/shell", func() {
 		})
 
 		It("attaches an additional reply func", func() {
+			Eventually(func() Any {
+				return hub.sessions
+			}).Should(HaveLen(1))
+
 			var res2 []byte
 			cb2 := func(r []byte) {
 				res2 = r
@@ -112,27 +121,30 @@ var _ = Describe("pkg/shell", func() {
 			Expect(sub2ID).NotTo(BeEmpty())
 			Expect(subID).NotTo(Equal(sub2ID))
 
-			Tick()
-
-			Expect(hub.sessions).To(HaveLen(1))
-			rows, cols, err := pty.Getsize(hub.sessions[sessID].pty)
-			Expect(err).To(BeNil())
-			Expect(rows).To(Equal(50))
-			Expect(cols).To(Equal(100))
-
 			Expect(hub.subscriptions).To(HaveLen(1))
+			Eventually(func() Any {
+				return hub.subscriptions[sessID]
+			}).Should(HaveLen(2))
 			Expect(hub.subscriptions[sessID]).To(HaveLen(2))
 			Expect(hub.subscriptions[sessID]).To(HaveKey(subID))
 			Expect(hub.subscriptions[sessID]).To(HaveKey(sub2ID))
 			Expect(hub.subscriptions[sessID][sub2ID]).NotTo(BeNil())
 
-			Expect(res2).NotTo(HaveLen(0))
+			Eventually(func() Any {
+				return res2
+			}).ShouldNot(HaveLen(0))
+
 			var j []string
 			Expect(json.Unmarshal(res2, &j)).To(BeNil())
 			Expect(j[0]).To(Equal("d"))
 			b, err := base64.StdEncoding.DecodeString(j[1])
 			Expect(err).To(BeNil())
 			Expect(string(b)).To(Equal("hello world"))
+
+			rows, cols, err := pty.Getsize(hub.sessions[sessID].pty)
+			Expect(err).To(BeNil())
+			Expect(rows).To(Equal(50))
+			Expect(cols).To(Equal(100))
 		})
 	})
 
@@ -141,23 +153,24 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			subID, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			subID, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 			Expect(subID).NotTo(BeEmpty())
 			Expect(sessID).NotTo(BeEmpty())
 		})
 
 		It("detaches an attached reply func", func() {
-			Tick()
-
-			Expect(hub.subscriptions).To(HaveLen(1))
+			Eventually(func() Any {
+				return hub.subscriptions
+			}).Should(HaveLen(1))
 			Expect(hub.subscriptions[sessID]).To(HaveLen(1))
 			Expect(hub.subscriptions[sessID]).To(HaveKey(subID))
 
 			Detach(sessID, subID)
-			Tick()
 
-			Expect(hub.subscriptions[sessID]).To(HaveLen(0))
+			Eventually(func() Any {
+				return hub.subscriptions[sessID]
+			}).Should(HaveLen(0))
 		})
 	})
 
@@ -183,13 +196,15 @@ var _ = Describe("pkg/shell", func() {
 		})
 
 		It("writes to the shell session's stdin", func() {
-			Tick()
+			Eventually(func() Any {
+				return hub.sessions
+			}).Should(HaveKey(sessID))
 
 			Input(sessID, []byte(":)\n"))
 
-			Tick()
-
-			Expect(res).NotTo(HaveLen(0))
+			Eventually(func() Any {
+				return res
+			}).ShouldNot(HaveLen(0))
 			Expect(string(res)).To(ContainSubstring(":)"))
 		})
 	})
@@ -199,21 +214,25 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 			Expect(sessID).NotTo(BeEmpty())
 		})
 
 		It("resizes the shell session's pseudo terminal", func() {
-			Tick()
+			Eventually(func() Any {
+				return hub.sessions
+			}).Should(HaveKey(sessID))
 
 			Resize(sessID, 200, 80)
-			Tick()
 
-			Expect(hub.sessions).To(HaveKey(sessID))
-			rows, cols, err := pty.Getsize(hub.sessions[sessID].pty)
-			Expect(err).To(BeNil())
-			Expect(cols).To(Equal(200))
+			var rows, cols int
+
+			Eventually(func() Any {
+				rows, cols, _ = pty.Getsize(hub.sessions[sessID].pty)
+				return cols
+			}).Should(Equal(200))
+
 			Expect(rows).To(Equal(80))
 		})
 	})
@@ -223,21 +242,21 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 			Expect(sessID).NotTo(BeEmpty())
 		})
 
 		It("kills the shell session's process", func() {
-			Tick()
-
-			Expect(hub.sessions).To(HaveLen(1))
-			Expect(hub.subscriptions).To(HaveLen(1))
+			Eventually(func() Any {
+				return hub.sessions
+			}).Should(HaveKey(sessID))
 
 			Kill(sessID)
-			Tick()
 
-			Expect(res).NotTo(HaveLen(0))
+			Eventually(func() Any {
+				return res
+			}).ShouldNot(HaveLen(0))
 			var j []string
 			Expect(json.Unmarshal(res, &j)).To(BeNil())
 			Expect(j[0]).To(Equal("exit"))
@@ -253,20 +272,22 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
-			_, sess2ID, err = StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			_, sess2ID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 		})
 
 		It("returns a list of shell session IDs", func() {
-			Tick()
-			Expect(hub.sessions).To(HaveLen(2))
+			Eventually(func() Any {
+				return hub.sessions
+			}).Should(SatisfyAll(HaveKey(sessID), HaveKey(sess2ID)))
 
 			List(cb)
-			Tick()
 
-			Expect(res).NotTo(HaveLen(0))
+			Eventually(func() Any {
+				return res
+			}).ShouldNot(HaveLen(0))
 			var j []string
 			Expect(json.Unmarshal(res, &j)).To(BeNil())
 			Expect(j).To(ConsistOf(sessID, sess2ID))
