@@ -43,13 +43,13 @@ var _ = Describe("pkg/shell", func() {
 		res = []byte{}
 	})
 
-	Describe("StartShellSessionAndAttach", func() {
+	Describe("StartAndAttach", func() {
 		Context("when a valid command is given", func() {
 			It("starts a shell session and attaches a reply func", func() {
 				Expect(hub.sessions).To(HaveLen(0))
 				Expect(hub.subscriptions).To(HaveLen(0))
 
-				subID, sessID, err := StartShellSessionAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+				subID, sessID, err := StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
 				Expect(err).To(BeNil())
 
 				Tick()
@@ -78,7 +78,7 @@ var _ = Describe("pkg/shell", func() {
 
 		Context("when an invalid command is given", func() {
 			It("returns error and does not attach", func() {
-				subID, sessID, err := StartShellSessionAndAttach("dcjknvd", []string{"foo", "123"}, currentUsername, 80, 25, cb)
+				subID, sessID, err := StartAndAttach("dcjknvd", []string{"foo", "123"}, currentUsername, 80, 25, cb)
 				Expect(subID).To(BeEmpty())
 				Expect(sessID).To(BeEmpty())
 				Expect(err).NotTo(BeNil())
@@ -96,7 +96,7 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			subID, sessID, err = StartShellSessionAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			subID, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 			Expect(subID).NotTo(BeEmpty())
 			Expect(sessID).NotTo(BeEmpty())
@@ -141,7 +141,7 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			subID, sessID, err = StartShellSessionAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			subID, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 			Expect(subID).NotTo(BeEmpty())
 			Expect(sessID).NotTo(BeEmpty())
@@ -177,7 +177,7 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			_, sessID, err = StartShellSessionAndAttach("/bin/bash", []string{"-c", `cat /dev/stdin > /dev/stdout`}, currentUsername, 80, 25, cb)
+			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `cat /dev/stdin > /dev/stdout`}, currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 			Expect(sessID).NotTo(BeEmpty())
 		})
@@ -199,7 +199,7 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			_, sessID, err = StartShellSessionAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 			Expect(sessID).NotTo(BeEmpty())
 		})
@@ -223,7 +223,7 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			_, sessID, err = StartShellSessionAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 			Expect(sessID).NotTo(BeEmpty())
 		})
@@ -253,9 +253,9 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			_, sessID, err = StartShellSessionAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
-			_, sess2ID, err = StartShellSessionAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			_, sess2ID, err = StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 		})
 
