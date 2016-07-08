@@ -11,6 +11,7 @@ import (
 
 type H map[string]interface{}
 type A []interface{}
+type Any interface{}
 
 func EncodeJSON(h interface{}) []byte {
 	j, err := json.Marshal(h)
