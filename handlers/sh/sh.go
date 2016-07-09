@@ -27,6 +27,8 @@ func Start(name string, data []byte, reply func([]byte)) {
 	var j struct {
 		Cmd   string   `json:"cmd"`
 		Args  []string `json:"args"`
+		Env   []string `json:"env"`
+		WD    string   `json:"wd"`
 		RunAs string   `json:"run_as"`
 		Cols  uint     `json:"cols"`
 		Rows  uint     `json:"rows"`
@@ -54,7 +56,7 @@ func Start(name string, data []byte, reply func([]byte)) {
 		j.Rows = 2
 	}
 
-	subscriptionID, shellSessionID, err := ShellStartAndAttach(j.Cmd, j.Args, j.RunAs, j.Cols, j.Rows, reply)
+	subscriptionID, shellSessionID, err := ShellStartAndAttach(j.Cmd, j.Args, j.Env, j.WD, j.RunAs, j.Cols, j.Rows, reply)
 	if err != nil {
 		ReplyJSON(H{
 			"error":             "failed_to_start_shell_session",

@@ -44,8 +44,8 @@ type shellOutput struct {
 	data           []byte
 }
 
-func StartAndAttach(cmd string, args []string, runAs string, cols, rows uint, reply func([]byte)) (subscriptionID string, shellSessionID string, err error) {
-	sess, err := startShellSession(cmd, args, runAs)
+func StartAndAttach(cmd string, args, env []string, wd, runAs string, cols, rows uint, reply func([]byte)) (subscriptionID string, shellSessionID string, err error) {
+	sess, err := startShellSession(cmd, args, env, wd, runAs)
 	if err != nil {
 		return "", "", err
 	}

@@ -33,7 +33,7 @@ func (w *shellWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func startShellSession(cmd string, args []string, runAs string) (*shellSession, error) {
+func startShellSession(cmd string, args, env []string, wd, runAs string) (*shellSession, error) {
 	u, err := user.Lookup(runAs)
 	if err != nil {
 		return nil, err
@@ -42,6 +42,14 @@ func startShellSession(cmd string, args []string, runAs string) (*shellSession, 
 	c := exec.Command(cmd, args...)
 	if c.SysProcAttr == nil {
 		c.SysProcAttr = &syscall.SysProcAttr{}
+	}
+
+	if env != nil && len(env) > 0 {
+		c.Env = env
+	}
+
+	if wd != "" {
+		c.Dir = wd
 	}
 
 	uid, err := strconv.ParseUint(u.Uid, 10, 32)
