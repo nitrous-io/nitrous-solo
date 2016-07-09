@@ -77,7 +77,9 @@ var _ = Describe("sh", func() {
 			params = H{
 				"cmd":    "/bin/ls",
 				"args":   []string{"-l"},
+				"env":    []string{"APP_ENV=production", "TERM=xterm-256color"},
 				"run_as": "nitrous",
+				"wd":     "/home/nitrous",
 				"cols":   80,
 				"rows":   25,
 			}
@@ -127,10 +129,12 @@ var _ = Describe("sh", func() {
 					Expect(call).NotTo(BeNil())
 					Expect(call.Arguments[0]).To(Equal(params["cmd"]))
 					Expect(call.Arguments[1]).To(Equal(params["args"]))
-					Expect(call.Arguments[2]).To(Equal(params["run_as"]))
-					Expect(call.Arguments[3]).To(Equal(uint(6)))
-					Expect(call.Arguments[4]).To(Equal(uint(2)))
-					ExpectSameFunc(call.Arguments[5], cb)
+					Expect(call.Arguments[2]).To(Equal(params["env"]))
+					Expect(call.Arguments[3]).To(Equal(params["wd"]))
+					Expect(call.Arguments[4]).To(Equal(params["run_as"]))
+					Expect(call.Arguments[5]).To(Equal(uint(6)))
+					Expect(call.Arguments[6]).To(Equal(uint(2)))
+					ExpectSameFunc(call.Arguments[7], cb)
 
 					j := parseResponseJSON()
 					Expect(j["subscription_id"]).To(Equal(call.ReturnValues[0]))
@@ -148,10 +152,12 @@ var _ = Describe("sh", func() {
 					Expect(call).NotTo(BeNil())
 					Expect(call.Arguments[0]).To(Equal(params["cmd"]))
 					Expect(call.Arguments[1]).To(Equal(params["args"]))
-					Expect(call.Arguments[2]).To(Equal(params["run_as"]))
-					Expect(call.Arguments[3]).To(Equal(uint(80)))
-					Expect(call.Arguments[4]).To(Equal(uint(25)))
-					ExpectSameFunc(call.Arguments[5], cb)
+					Expect(call.Arguments[2]).To(Equal(params["env"]))
+					Expect(call.Arguments[3]).To(Equal(params["wd"]))
+					Expect(call.Arguments[4]).To(Equal(params["run_as"]))
+					Expect(call.Arguments[5]).To(Equal(uint(80)))
+					Expect(call.Arguments[6]).To(Equal(uint(25)))
+					ExpectSameFunc(call.Arguments[7], cb)
 
 					j := parseResponseJSON()
 					Expect(j["subscription_id"]).To(Equal(call.ReturnValues[0]))

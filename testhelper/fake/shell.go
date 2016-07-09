@@ -24,7 +24,7 @@ func FakeShellReset() {
 	ShellListCalls = Calls{}
 }
 
-func ShellStartAndAttach(cmd string, args []string, runAs string, cols, rows uint, reply func([]byte)) (subscriptionID string, shellSessionID string, err error) {
+func ShellStartAndAttach(cmd string, args, env []string, wd, runAs string, cols, rows uint, reply func([]byte)) (subscriptionID string, shellSessionID string, err error) {
 	err = ShellStartAndAttachError
 	if err == nil {
 		subscriptionID = uuid.NewV4().String()
@@ -32,7 +32,7 @@ func ShellStartAndAttach(cmd string, args []string, runAs string, cols, rows uin
 	}
 
 	ShellStartAndAttachCalls.Add(
-		List{cmd, args, runAs, cols, rows, reply},
+		List{cmd, args, env, wd, runAs, cols, rows, reply},
 		List{subscriptionID, shellSessionID, err},
 		nil,
 	)

@@ -49,7 +49,7 @@ var _ = Describe("pkg/shell", func() {
 				Expect(hub.sessions).To(HaveLen(0))
 				Expect(hub.subscriptions).To(HaveLen(0))
 
-				subID, sessID, err := StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+				subID, sessID, err := StartAndAttach("./bash", []string{"-c", `echo -n $MSG; sleep 10`}, []string{"MSG=hello world"}, "/bin", currentUsername, 80, 25, cb)
 				Expect(err).To(BeNil())
 
 				Eventually(func() Any {
@@ -82,7 +82,7 @@ var _ = Describe("pkg/shell", func() {
 
 		Context("when an invalid command is given", func() {
 			It("returns error and does not attach", func() {
-				subID, sessID, err := StartAndAttach("dcjknvd", []string{"foo", "123"}, currentUsername, 80, 25, cb)
+				subID, sessID, err := StartAndAttach("dcjknvd", []string{"foo", "123"}, []string{}, "/bin", currentUsername, 80, 25, cb)
 				Expect(subID).To(BeEmpty())
 				Expect(sessID).To(BeEmpty())
 				Expect(err).NotTo(BeNil())
@@ -101,7 +101,7 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			subID, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, currentUsername, 80, 25, cb)
+			subID, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `echo -n "hello world"; sleep 10`}, nil, "", currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 			Expect(subID).NotTo(BeEmpty())
 			Expect(sessID).NotTo(BeEmpty())
@@ -153,7 +153,7 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			subID, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, currentUsername, 80, 25, cb)
+			subID, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, nil, "", currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 			Expect(subID).NotTo(BeEmpty())
 			Expect(sessID).NotTo(BeEmpty())
@@ -190,7 +190,7 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `cat /dev/stdin > /dev/stdout`}, currentUsername, 80, 25, cb)
+			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `cat /dev/stdin > /dev/stdout`}, nil, "", currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 			Expect(sessID).NotTo(BeEmpty())
 		})
@@ -214,7 +214,7 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, currentUsername, 80, 25, cb)
+			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, nil, "", currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 			Expect(sessID).NotTo(BeEmpty())
 		})
@@ -242,7 +242,7 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, currentUsername, 80, 25, cb)
+			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, nil, "", currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 			Expect(sessID).NotTo(BeEmpty())
 		})
@@ -272,9 +272,9 @@ var _ = Describe("pkg/shell", func() {
 
 		BeforeEach(func() {
 			var err error
-			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, currentUsername, 80, 25, cb)
+			_, sessID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, nil, "", currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
-			_, sess2ID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, currentUsername, 80, 25, cb)
+			_, sess2ID, err = StartAndAttach("/bin/bash", []string{"-c", `sleep 10`}, nil, "", currentUsername, 80, 25, cb)
 			Expect(err).To(BeNil())
 		})
 
