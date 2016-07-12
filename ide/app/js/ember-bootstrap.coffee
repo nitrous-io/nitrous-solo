@@ -49,20 +49,6 @@ window.NitrousIO = Em.Application.extend Em.Evented,
 
   freighterdFeatures: null
 
-  reloadContainer: ->
-    @loadContainer(@get 'slug').then (container) ->
-      container.loadCollaborators()
-      container.loadHost()
-
-  loadContainer: (slug)->
-    if !slug
-      return Em.RSVP.Promise.reject(new Error('No slug specified'))
-
-    App.set 'slug', slug
-    App.Container.fetch(slug).then (container) ->
-      App.set 'container', container
-      container
-
   didChangeTitle: (->
     title = @get 'title'
     document.title = if title
