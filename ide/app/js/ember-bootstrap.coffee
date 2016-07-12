@@ -30,7 +30,7 @@ window.NitrousIO = Em.Application.extend Em.Evented,
 
   user: null
   userSettings: null
-  container: null
+  userMetadata: null
   hostBinding: Em.Binding.oneWay 'container.host'
 
   eventsSocket: null
