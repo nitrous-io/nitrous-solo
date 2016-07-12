@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nitrous-io/nitrous-solo/controllers/auth"
 	"github.com/nitrous-io/nitrous-solo/controllers/ping"
 	"github.com/nitrous-io/nitrous-solo/controllers/root"
 	"github.com/nitrous-io/nitrous-solo/controllers/socket"
@@ -25,6 +26,8 @@ func Draw(r *gin.Engine, appDir string) {
 	r.GET("/ping", ping.Ping)
 
 	r.GET("/socket", socket.Socket)
+
+	r.POST("/token", auth.CreateToken)
 
 	ws.RegisterHandler("ping", ping_.Ping)
 	ws.RegisterHandler("fs.ls", fs.List)
