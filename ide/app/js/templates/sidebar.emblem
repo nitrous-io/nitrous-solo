@@ -25,9 +25,6 @@
               | Upload Files
 
   #sidebar-group
-    .ide-pane class={showActiveFilesPane::hidden}
-      App.IdeSidebarActiveFilesView
-
     .tree contextMenu='didRightClickBackground target="view"'
       ul.root
         App.IdePathView path=rootPath

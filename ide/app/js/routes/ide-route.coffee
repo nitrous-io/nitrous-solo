@@ -8,25 +8,6 @@ App.IdeRoute = Em.Route.extend
       App.set 'userSettings', settings
     Em.RSVP.allSettled([userFetch, userSettingsFetch])
 
-  model: (params) ->
-    @_super.apply this, arguments
-    slug = params.containerSlug
-
-    if !slug
-      window.location.href = '/404.html'
-    else
-      App.loadContainer(slug).catch ->
-        window.location.href = '/404.html'
-
-  afterModel: (container, transition) ->
-    container?.loadCollaborators()
-    container?.loadHost().catch ->
-      transition.abort()
-
-  #renderTemplate: ->
-    #@_super()
-    #@render 'feedback', into: 'ide', outlet: 'feedback', controller: 'feedback'
-
   persistData: ->
     TabWatcher.syncChanges()
     App.get('userSettings')?.save()

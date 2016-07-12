@@ -344,20 +344,6 @@ App.IdeMainMenuView = Em.View.extend
           callback: (controller) ->
             controller.windowToggleFullScreenConsole()
         separator
-        menuItem 'Show Active Files',
-          hide: (->
-            return false if App.get('fileTreeHidden')
-            App.get('router.ideSidebarController.showActiveFilesPane')
-          ).property('App.fileTreeHidden', 'App.router.ideSidebarController.showActiveFilesPane')
-          callback: (controller)->
-            controller.windowShowActiveFiles()
-        menuItem 'Hide Active Files',
-          hide: (->
-            return true if App.get('fileTreeHidden')
-            !App.get('router.ideSidebarController.showActiveFilesPane')
-          ).property('App.fileTreeHidden', 'App.router.ideSidebarController.showActiveFilesPane')
-          callback: (controller)->
-            controller.windowHideActiveFiles()
         menuItem 'Hide File Tree',
           hideBinding: Em.Binding.oneWay('App.fileTreeHidden')
           callback: (controller) ->
@@ -371,16 +357,6 @@ App.IdeMainMenuView = Em.View.extend
       ]
       menu 'Preview', @get('previewItems')
     ]
-
-    base.push(menu 'Collaborate', [
-      menuItem 'Invite Collaborators',
-        disabled: (->
-          !App.get('host.slug') || !App.get('container.slug') || !isOwner(App.get('container'))
-        ).property 'App.host.slug', 'App.container.slug', 'App.container'
-
-        url: "/app/#/dashboard/workstations/#{App.get('host.slug')}/projects/#{App.get('container.slug')}/collaborators"
-        target: '_blank'
-    ])
 
     base.push(menu 'Help', @get('helpMenuItems'))
 
