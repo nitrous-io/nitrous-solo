@@ -5,5 +5,8 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export NITROUS_ENV=${NITROUS_ENV:-"development"}
 BUILD_DIR="build/$NITROUS_ENV"
 
+configPkg="github.com/nitrous-io/nitrous-solo/config"
+buildLdFlags="-X $configPkg.Env=$NITROUS_ENV"
+
 cd $DIR/..
-$DIR/env go build -o "$BUILD_DIR/nitrousadmin" nitrousadmin/nitrousadmin.go
+$DIR/env go build -ldflags "$buildLdFlags" -o "$BUILD_DIR/nitrousadmin" nitrousadmin/nitrousadmin.go

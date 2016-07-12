@@ -2,19 +2,19 @@ package main
 
 import (
 	"flag"
-	"os"
 	"os/user"
 	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 	"github.com/kardianos/osext"
+	"github.com/nitrous-io/nitrous-solo/config"
 	"github.com/nitrous-io/nitrous-solo/data"
 	"github.com/nitrous-io/nitrous-solo/server"
 )
 
 func main() {
-	if os.Getenv("NITROUS_ENV") == "production" {
+	if config.Env == "production" {
 		gin.SetMode("release")
 	}
 

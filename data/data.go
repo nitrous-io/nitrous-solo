@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/nitrous-io/nitrous-solo/config"
 )
 
 var D *Data
@@ -19,7 +20,7 @@ type Data struct {
 	Users map[string]*UserData // <Login, *UserData>
 }
 
-func new() *Data {
+func Reset() *Data {
 	return &Data{
 		Users: map[string]*UserData{},
 	}
@@ -29,13 +30,19 @@ func Load() {
 	if DataDirPath == "" {
 		logrus.Fatalf("path to data directory must be defined")
 	}
-	path := filepath.Join(DataDirPath, dataFileName)
+
+	suffix := ""
+	if e := config.Env; e != "production" {
+		suffix = "-" + e
+	}
+
+	path := filepath.Join(DataDirPath, dataFileName+suffix)
 
 	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// write default file
-			D = new()
+			D = Reset()
 			if err := Save(); err != nil {
 				logrus.Fatal(err)
 			}
