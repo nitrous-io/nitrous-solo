@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os/user"
 	"testing"
+	"time"
 
 	. "github.com/nitrous-io/nitrous-solo/testhelper"
 	"github.com/nitrous-io/pty"
@@ -41,6 +42,11 @@ var _ = Describe("pkg/shell", func() {
 	BeforeEach(func() {
 		resetHub()
 		res = []byte{}
+		SetDefaultEventuallyTimeout(5 * time.Second)
+	})
+
+	AfterEach(func() {
+		SetDefaultEventuallyTimeout(1 * time.Second)
 	})
 
 	Describe("StartAndAttach", func() {
@@ -57,7 +63,9 @@ var _ = Describe("pkg/shell", func() {
 				}).Should(HaveKey(sessID))
 				Expect(hub.sessions[sessID]).NotTo(BeNil())
 
-				Expect(hub.subscriptions).To(HaveKey(sessID))
+				Eventually(func() Any {
+					return hub.subscriptions
+				}).Should(HaveKey(sessID))
 				Expect(hub.subscriptions[sessID]).To(HaveLen(1))
 				Expect(hub.subscriptions[sessID]).To(HaveKey(subID))
 				Expect(hub.subscriptions[sessID][subID]).NotTo(BeNil())
