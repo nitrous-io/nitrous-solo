@@ -16,7 +16,6 @@ App.IdeSidebarController = Em.ArrayController.extend
   repositoryBinding: Em.Binding.oneWay 'App.router.indexontroller.repository'
 
   hiddenFilesVisible: false
-  overrideActiveFilesPane: null
 
   currentlySelectedPath: null
 
@@ -324,9 +323,7 @@ App.IdeSidebarController = Em.ArrayController.extend
 
       callback = (err) =>
         if err
-          # TODO: Freighter should be returning a proper error code for file exists.
-          # Revisit after #381 is merged.
-          errMsg = if err.match /file exists/
+          errMsg = if err.match /file_exists_at_path/
             "\"#{name}\" already exists. Please enter a different filename."
           else
             "Error occurred while trying to save the file."
@@ -466,15 +463,7 @@ App.IdeSidebarController = Em.ArrayController.extend
   _makeAbsolutePath: (parentAbsolutePath, fileName) ->
     _.chain([parentAbsolutePath, fileName]).compact().join('/').value()
 
-  showActiveFilesPane: (->
-    if (override = @get 'overrideActiveFilesPane') != null
-      return override
-
-    return @get('activeFilesMonitor')?.get('sortedFiles').any (file)->
-      file.hasRemoteClients
-  ).property 'overrideActiveFilesPane', 'activeFilesMonitor.sortedFiles'
-
-  findParentPath: (path)->
+  findParentPath: (path) ->
     rootPath = @get 'rootPath'
     parentAbsolutePath = path.get 'parentAbsolutePath'
     return rootPath.findByRelativePath parentAbsolutePath

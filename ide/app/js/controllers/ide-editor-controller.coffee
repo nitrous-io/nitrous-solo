@@ -169,9 +169,7 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
       readOnly: false
       focused: true
     if err
-      # TODO: Freighter should be returning a proper error code for file exists.
-      # Revisit after #381 is merged.
-      errors = if err.match /file exists/
+      errors = if err.match /file_exists_at_path/
         {base: ["already exists. Please enter a different filename."]}
       else
         {base: ["Error occurred while trying to save the file."]}
