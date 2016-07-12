@@ -6,7 +6,9 @@ App.IdeRoute = Em.Route.extend
       App.set 'user', user
     userSettingsFetch = App.UserSettings.fetch().then (settings) ->
       App.set 'userSettings', settings
-    Em.RSVP.allSettled([userFetch, userSettingsFetch])
+    userMetadataFetch = App.UserMetadata.fetch().then (metadata) ->
+      App.set 'userMetadata', metadata
+    Em.RSVP.allSettled([userFetch, userSettingsFetch, userMetadataFetch])
 
   persistData: ->
     TabWatcher.syncChanges()
