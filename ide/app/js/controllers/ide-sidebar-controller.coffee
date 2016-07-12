@@ -25,9 +25,9 @@ App.IdeSidebarController = Em.ArrayController.extend
   currentDroppable: null
 
   initialize: ->
-    @set 'homePath', homePath = App.Path.create absolutePath: App.get('container.homePath'), directory: true
+    @set 'homePath', homePath = App.Path.create absolutePath: App.get('userMetadata').home_path, directory: true
     @set 'content', Em.A([homePath])
-    @set 'rootPath', App.Path.create absolutePath: App.get('container.rootPath'), directory: true
+    @set 'rootPath', App.Path.create absolutePath: App.get('userMetadata').root_path, directory: true
 
   reset: ->
     @set 'homePath', null
@@ -43,19 +43,19 @@ App.IdeSidebarController = Em.ArrayController.extend
     this.refreshPath absolutePathString
 
   opsSocketDidStartForTheFirstTime: (->
-    if @get 'opsSocket.startedFirstTime'
+    if @get('opsSocket.startedFirstTime') && @get('opsSocketReady')
       Em.run.next =>
         socket = @get 'opsSocket'
         socket.on 'dirChanged.output', _.bind(@onDirChanged, this)
         this.openPath @get('rootPath')
-        unless App.get('container.metadata.readmeOpened')
+        unless App.get('userMetadata').readme_opened
           this.openRepoReadme()
 
         @restoreOpenTabs()
-  ).observes 'opsSocket.startedFirstTime'
+  ).observes 'opsSocket.startedFirstTime', 'opsSocketReady'
 
   restoreOpenTabs: ->
-    if openTabs = App.get('container.userData.openTabs')
+    if openTabs = App.get('userMetadata').openTabs
       index = 0
       for tab in openTabs
         if tab.readme
@@ -77,7 +77,7 @@ App.IdeSidebarController = Em.ArrayController.extend
     this.openPath repoPath, error: false
 
   openRepoReadme: (settings = {}) ->
-    App.get('container').setMetadata({readmeOpened: true})
+    App.get('userMetadata').setMetadata({readmeOpened: true})
 
     if codeDir = @get('controllers.ide.codeDir')
       homePath = @get('homePath.absolutePath')
@@ -109,7 +109,7 @@ App.IdeSidebarController = Em.ArrayController.extend
 
       return
 
-    if (readme_url = App.get('container.env.NITROUS_README_URL'))
+    if (readme_url = App.get('userMetadata').readme_url)
       editorController = @get('controllers.ideEditor')
       tab = editorController.createTab(
         content: readme_url
@@ -302,9 +302,9 @@ App.IdeSidebarController = Em.ArrayController.extend
 
   rootPathDidChange: (->
     val = @get 'rootPath'
-    return if App.get('container.rootPath') == val
-    return if App.get('container.metadata.rootPath') == val
-    App.get('container').setMetadata({rootPath: val.get 'collabPath'})
+    return if App.get('userMetadata').root_path == val
+    return if App.get('userMetadata').root_path == val
+    App.get('userMetadata').setMetadata({rootPath: val.get 'collabPath'})
   ).observes 'rootPath'
 
   newPath: (path, directory) ->
