@@ -1,6 +1,6 @@
 window.TabWatcher = class @TabWatcher
   instance = null
-  constructor: (@rootPane, @container) ->
+  constructor: (@rootPane, @userMetadata) ->
     @changedAt = null
     @lastSynced = null
     instance ?= this
@@ -36,7 +36,7 @@ window.TabWatcher = class @TabWatcher
         }
         changes.push change
 
-    @container.setUserData('openTabs', changes).fail =>
+    @userMetadata.setMetadata({openTabs: changes}).fail =>
       @scheduleSync(10000)
 
   @notifyOfChange: ->
