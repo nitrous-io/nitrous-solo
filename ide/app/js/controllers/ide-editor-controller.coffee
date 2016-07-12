@@ -44,7 +44,7 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
     editorPane = App.EditorPane.create(tabs: Em.A())
     @set 'rootPane', editorPane
     @set 'activePane', editorPane
-    @set 'tabWatcher', new TabWatcher(editorPane, App.get('container'))
+    @set 'tabWatcher', new TabWatcher(editorPane, App.get('userMetadata'))
 
     @useUserSettings()
 
@@ -153,7 +153,7 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
     docContent = doc.get 'content'
     # FIXME probably not the best way to scope to home path
     path = saveDialog.get 'path'
-    homePath = App.get('container.homePath')
+    homePath = App.get('userMetadata').home_path
     absolutePath = "#{homePath}/#{path}"
     doc.set 'readOnly', true
 

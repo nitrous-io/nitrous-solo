@@ -5,7 +5,7 @@ App.IdeConsoleView = Em.View.extend App.IdeTabViewMixin,
 
   didInsertElement: ->
     @_super()
-    if App.get('container').metadata.noConsole
+    if App.get('userMetadata').no_console
       @get('controller').set 'minimized', true
     else
       @get('controller').createTab()

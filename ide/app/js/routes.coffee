@@ -1,2 +1,2 @@
 App.Router.map ->
-  @resource 'ide', path: '/:containerSlug'
+  @resource 'ide'

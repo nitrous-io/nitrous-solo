@@ -16,7 +16,27 @@ window.FakeJSON = {
     show_trailing_space: false,
     soft_tabs: true,
     tab_size: 2,
-    theme: "base16-light",
+    theme: "solarized dark",
     wrap_lines: true
-  }
+  },
+  user_metadata: {
+    root_path: '/home/nitrous',
+    home_path: '/home/nitrous',
+    no_console: false,
+    readme_url: 'https://nitrous-readmes.s3.amazonaws.com/ruby.2015-06-29.html',
+    readme_opened: false,
+    openTabs: [
+      {
+        path: "/home/nitrous/.viminfo",
+        scrollPosition: { left: 0, top: 2 },
+        selections: [
+          {
+            anchor: { line: 2, ch: 0, xRel: 1, outside: true },
+            head: { line: 2, ch: 0, xRel: 1, outside: true }
+          }
+        ],
+        active: true
+      }
+    ]
+  },
 };
