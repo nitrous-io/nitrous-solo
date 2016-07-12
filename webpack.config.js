@@ -19,8 +19,7 @@ var jsConfig = {
   name: 'js',
   entry: {
     bundle: path.join(APP_JS_DIR, 'main.coffee'),
-    terminal: path.join(APP_JS_DIR, 'terminal', 'terminal.coffee'),
-    socket_test: path.join(APP_DIR, 'test_js', 'main.js')
+    terminal: path.join(APP_JS_DIR, 'terminal', 'terminal.coffee')
   },
   output: {
     path: ASSETS_DIR,

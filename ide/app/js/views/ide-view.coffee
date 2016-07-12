@@ -18,7 +18,6 @@ App.IdeView = Em.View.extend
     Em.run.scheduleOnce 'afterRender', ->
       webapp?.loading.stop()
     controller = @get 'controller'
-    controller.validateHostAndContainerState()
     @set('timeStarted', Date.now())
 
   willDestroyElement: ->
