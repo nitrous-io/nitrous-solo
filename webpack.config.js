@@ -1,7 +1,8 @@
 const webpack = require('webpack'),
       CopyWebpackPlugin = require('copy-webpack-plugin'),
-      autoprefixer = require('autoprefixer'),
-      path = require('path');
+      path = require('path'),
+      ExtractTextPlugin = require('extract-text-webpack-plugin'),
+      OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 
 const NITROUS_ENV = process.env.NITROUS_ENV || 'development';
 
@@ -9,46 +10,71 @@ const SRC_DIR = path.resolve(__dirname, 'ide'),
       BUILD_DIR = path.resolve(__dirname, 'build'),
       NODE_MODULES_DIR = path.resolve(__dirname, 'node_modules'),
       APP_DIR = path.join(SRC_DIR, 'app'),
+      APP_JS_DIR = path.join(APP_DIR, 'js'),
+      APP_CSS_DIR = path.join(APP_DIR, 'css'),
       DEST_DIR = path.join(BUILD_DIR, NITROUS_ENV),
       ASSETS_DIR = path.join(DEST_DIR, 'assets');
 
-const config = {
-  entry: path.join(APP_DIR, 'main.js'),
+var jsConfig = {
+  name: 'js',
+  entry: {
+    bundle: path.join(APP_JS_DIR, 'main.coffee'),
+    terminal: path.join(APP_JS_DIR, 'terminal', 'terminal.coffee'),
+    socket_test: path.join(APP_DIR, 'test_js', 'main.js')
+  },
   output: {
     path: ASSETS_DIR,
-    filename: 'bundle.js'
+    filename: '[name].js'
   },
-  devtool: "source-map",
-  plugins: [
-    new CopyWebpackPlugin([
-      {
-        from: path.join(SRC_DIR, 'assets'),
-        to: ASSETS_DIR
-      }
-    ])
-  ],
   module: {
     loaders: [
-      {
-        test: /\.jsx?/,
-        include: APP_DIR,
-        loaders: ['babel', 'eslint'],
-      },
-      {
-        test: /\.css$/,
-        include: [APP_DIR, NODE_MODULES_DIR],
-        loaders: ["style", "css", "postcss"]
-      },
-      {
-        test: /\.s(a|c)ss$/,
-        include: [APP_DIR, NODE_MODULES_DIR],
-        loaders: ["style", "css", "postcss", "sass"]
-      }
+      { test: /\.js$/, include: path.join(APP_DIR, 'test_js'), loader: 'babel' },
+      { test: /\.coffee$/, loader: 'coffee' },
+      { test: /\.emblem$/, loader: 'legacy-ember-emblem-loader', query: { appPath: APP_JS_DIR } }
     ]
   },
-  postcss() {
-    return [autoprefixer];
+  resolve: {
+    extensions: ['', '.js', '.coffee', '.emblem']
   },
+  devtool: 'source-map',
+  node: {
+    fs: 'empty'
+  }
 };
 
-module.exports = config;
+if (NITROUS_ENV !== 'development') {
+  jsConfig.plugins.push(new webpack.optimize.UglifyJsPlugin({compress:{warnings: false}}));
+}
+
+var cssConfig = {
+  name: 'css',
+  entry: {
+    app: path.join(APP_CSS_DIR, 'application.sass'),
+    terminal: path.join(APP_CSS_DIR, 'terminal.sass')
+  },
+  output: {
+    path: ASSETS_DIR,
+    filename: '[name].css'
+  },
+  module: {
+    loaders: [
+      { test: /\.s(a|c)ss$/, loader: ExtractTextPlugin.extract('style', 'css!sass') },
+      { test: /\.(woff|woff2|eot|ttf|svg)(\?.*$|$)/, loader: 'file' }
+    ]
+  },
+  resolve: {
+    extensions: ['', 'css', 'sass']
+  },
+  plugins: [
+    new ExtractTextPlugin('[name].css', {
+      allChunks: true
+    }),
+    new OptimizeCssAssetsPlugin()
+  ],
+  devtool: 'source-map',
+  node: {
+    fs: 'empty'
+  }
+};
+
+module.exports = [jsConfig, cssConfig];
