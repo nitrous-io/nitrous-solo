@@ -31,12 +31,12 @@ App.IdeConsoleController = Em.ArrayController.extend App.IdeTabControllerMixin, 
     empty = @get('content.length') == 0
     @_super.apply this, arguments
     if empty
-      App.get('container').setMetadata({noConsole: null})
+      App.get('userMetadata').setMetadata({noConsole: null})
       @set 'minimized', false
 
   removeTab: (tab)->
     @_super.apply this, arguments
     if @get('content.length') == 0
-      App.get('container').setMetadata({noConsole: true})
+      App.get('userMetadata').setMetadata({noConsole: true})
       unless @get 'fullscreen'
         @set 'minimized', true
