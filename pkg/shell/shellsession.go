@@ -90,8 +90,10 @@ func startShellSession(cmd string, args, env []string, wd, runAs string) (*shell
 			shellSessionID: id,
 			kind:           "exit",
 			data:           []byte(c.ProcessState.String()),
+			then: func() {
+				hub.unregister(id)
+			},
 		}
-		hub.finish <- id
 	}()
 
 	return s, nil

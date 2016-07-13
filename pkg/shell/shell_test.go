@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os/user"
 	"testing"
-	"time"
 
 	. "github.com/nitrous-io/nitrous-solo/testhelper"
 	"github.com/nitrous-io/pty"
@@ -19,9 +18,9 @@ func Test(t *testing.T) {
 }
 
 func resetHub() {
-	hub.stop <- struct{}{}
-	chanBufSize = 0
+	oldHub := hub
 	hub = newShellHub()
+	oldHub.stop <- struct{}{}
 	go hub.run()
 }
 
@@ -42,11 +41,6 @@ var _ = Describe("pkg/shell", func() {
 	BeforeEach(func() {
 		resetHub()
 		res = []byte{}
-		SetDefaultEventuallyTimeout(5 * time.Second)
-	})
-
-	AfterEach(func() {
-		SetDefaultEventuallyTimeout(1 * time.Second)
 	})
 
 	Describe("StartAndAttach", func() {
@@ -58,14 +52,10 @@ var _ = Describe("pkg/shell", func() {
 				subID, sessID, err := StartAndAttach("./bash", []string{"-c", `echo -n $MSG; sleep 10`}, []string{"MSG=hello world"}, "/bin", currentUsername, 80, 25, cb)
 				Expect(err).To(BeNil())
 
-				Eventually(func() Any {
-					return hub.sessions
-				}).Should(HaveKey(sessID))
+				Expect(hub.sessions).To(HaveKey(sessID))
 				Expect(hub.sessions[sessID]).NotTo(BeNil())
 
-				Eventually(func() Any {
-					return hub.subscriptions
-				}).Should(HaveKey(sessID))
+				Expect(hub.subscriptions).To(HaveKey(sessID))
 				Expect(hub.subscriptions[sessID]).To(HaveLen(1))
 				Expect(hub.subscriptions[sessID]).To(HaveKey(subID))
 				Expect(hub.subscriptions[sessID][subID]).NotTo(BeNil())
@@ -95,9 +85,7 @@ var _ = Describe("pkg/shell", func() {
 				Expect(sessID).To(BeEmpty())
 				Expect(err).NotTo(BeNil())
 
-				Eventually(func() Any {
-					return hub.sessions
-				}).Should(HaveLen(0))
+				Expect(hub.sessions).To(HaveLen(0))
 				Expect(hub.subscriptions).To(HaveLen(0))
 				Expect(res).To(HaveLen(0))
 			})
@@ -116,9 +104,8 @@ var _ = Describe("pkg/shell", func() {
 		})
 
 		It("attaches an additional reply func", func() {
-			Eventually(func() Any {
-				return hub.sessions
-			}).Should(HaveLen(1))
+			Expect(hub.sessions).To(HaveLen(1))
+			Expect(hub.subscriptions).To(HaveLen(1))
 
 			var res2 []byte
 			cb2 := func(r []byte) {
@@ -130,9 +117,6 @@ var _ = Describe("pkg/shell", func() {
 			Expect(subID).NotTo(Equal(sub2ID))
 
 			Expect(hub.subscriptions).To(HaveLen(1))
-			Eventually(func() Any {
-				return hub.subscriptions[sessID]
-			}).Should(HaveLen(2))
 			Expect(hub.subscriptions[sessID]).To(HaveLen(2))
 			Expect(hub.subscriptions[sessID]).To(HaveKey(subID))
 			Expect(hub.subscriptions[sessID]).To(HaveKey(sub2ID))
@@ -168,17 +152,13 @@ var _ = Describe("pkg/shell", func() {
 		})
 
 		It("detaches an attached reply func", func() {
-			Eventually(func() Any {
-				return hub.subscriptions
-			}).Should(HaveLen(1))
+			Expect(hub.subscriptions).To(HaveLen(1))
 			Expect(hub.subscriptions[sessID]).To(HaveLen(1))
 			Expect(hub.subscriptions[sessID]).To(HaveKey(subID))
 
 			Detach(sessID, subID)
 
-			Eventually(func() Any {
-				return hub.subscriptions[sessID]
-			}).Should(HaveLen(0))
+			Expect(hub.subscriptions[sessID]).To(HaveLen(0))
 		})
 	})
 
@@ -204,9 +184,7 @@ var _ = Describe("pkg/shell", func() {
 		})
 
 		It("writes to the shell session's stdin", func() {
-			Eventually(func() Any {
-				return hub.sessions
-			}).Should(HaveKey(sessID))
+			Expect(hub.sessions).To(HaveKey(sessID))
 
 			Input(sessID, []byte(":)\n"))
 
@@ -228,9 +206,7 @@ var _ = Describe("pkg/shell", func() {
 		})
 
 		It("resizes the shell session's pseudo terminal", func() {
-			Eventually(func() Any {
-				return hub.sessions
-			}).Should(HaveKey(sessID))
+			Expect(hub.sessions).To(HaveKey(sessID))
 
 			Resize(sessID, 200, 80)
 
@@ -256,9 +232,7 @@ var _ = Describe("pkg/shell", func() {
 		})
 
 		It("kills the shell session's process", func() {
-			Eventually(func() Any {
-				return hub.sessions
-			}).Should(HaveKey(sessID))
+			Expect(hub.sessions).To(HaveKey(sessID))
 
 			Kill(sessID)
 
@@ -287,9 +261,7 @@ var _ = Describe("pkg/shell", func() {
 		})
 
 		It("returns a list of shell session IDs", func() {
-			Eventually(func() Any {
-				return hub.sessions
-			}).Should(SatisfyAll(HaveKey(sessID), HaveKey(sess2ID)))
+			Expect(hub.sessions).To(SatisfyAll(HaveKey(sessID), HaveKey(sess2ID)))
 
 			List(cb)
 

@@ -44,12 +44,13 @@ var _ = Describe("socket", func() {
 	})
 
 	AfterEach(func() {
-		if res != nil {
-			res.Body.Close()
+		if conn != nil {
+			conn.WriteMessage(websocket.CloseMessage, []byte("bye"))
+			conn.Close()
 		}
 
-		if conn != nil {
-			conn.Close()
+		if res != nil {
+			res.Body.Close()
 		}
 
 		s.Close()

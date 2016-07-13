@@ -1,56 +1,12 @@
 package shell
 
-import "github.com/satori/go.uuid"
-
-type subscription struct {
-	id             string
-	shellSessionID string
-	reply          func([]byte)
-}
-
-type attachParams struct {
-	subscription subscription
-	cols         uint
-	rows         uint
-}
-
-type detachParams struct {
-	subscriptionID string
-	shellSessionID string
-}
-
-type resizeParams struct {
-	shellSessionID string
-	cols           uint
-	rows           uint
-}
-
-func newSubscription(shellSessionID string, reply func([]byte)) subscription {
-	return subscription{
-		id:             uuid.NewV4().String(),
-		shellSessionID: shellSessionID,
-		reply:          reply,
-	}
-}
-
-type shellInput struct {
-	shellSessionID string
-	data           []byte
-}
-
-type shellOutput struct {
-	shellSessionID string
-	kind           string
-	data           []byte
-}
-
 func StartAndAttach(cmd string, args, env []string, wd, runAs string, cols, rows uint, reply func([]byte)) (subscriptionID string, shellSessionID string, err error) {
 	sess, err := startShellSession(cmd, args, env, wd, runAs)
 	if err != nil {
 		return "", "", err
 	}
 
-	hub.new <- sess
+	hub.register(sess)
 
 	shellSessionID = sess.id
 	subscriptionID = Attach(shellSessionID, cols, rows, reply)
@@ -59,19 +15,12 @@ func StartAndAttach(cmd string, args, env []string, wd, runAs string, cols, rows
 
 func Attach(shellSessionID string, cols, rows uint, reply func([]byte)) (subscriptionID string) {
 	sub := newSubscription(shellSessionID, reply)
-	hub.attach <- attachParams{
-		subscription: sub,
-		cols:         cols,
-		rows:         rows,
-	}
+	hub.subscribe(sub, cols, rows)
 	return sub.id
 }
 
 func Detach(shellSessionID, subscriptionID string) {
-	hub.detach <- detachParams{
-		subscriptionID: subscriptionID,
-		shellSessionID: shellSessionID,
-	}
+	hub.unsubscribe(shellSessionID, subscriptionID)
 }
 
 func Input(shellSessionID string, data []byte) {
