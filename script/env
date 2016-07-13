@@ -3,4 +3,4 @@ set -e
 export NITROUS_ENV=${NITROUS_ENV:-"development"}
 echo "NITROUS_ENV is \"$NITROUS_ENV\""
 
-$(eval echo "$@")
+"$@"

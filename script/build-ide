@@ -5,5 +5,5 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export NITROUS_ENV=${NITROUS_ENV:-"development"}
 BUILD_DIR="build/$NITROUS_ENV"
 
-cd $DIR/..
-$DIR/env webpack
+cd "$DIR/.."
+"$DIR/env" webpack
