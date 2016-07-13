@@ -2,6 +2,7 @@ package ws
 
 import (
 	"testing"
+	"time"
 
 	. "github.com/nitrous-io/nitrous-solo/testhelper"
 	. "github.com/onsi/ginkgo"
@@ -14,8 +15,9 @@ func Test(t *testing.T) {
 }
 
 func resetHub() {
-	hub.stop <- struct{}{}
+	oldHub := hub
 	hub = newHub()
+	oldHub.stop <- struct{}{}
 	go hub.run()
 }
 
@@ -24,30 +26,27 @@ var _ = Describe("pkg/ws", func() {
 		resetHub()
 	})
 
-	Describe("registerConn channel", func() {
+	Describe("registerConn()", func() {
 		It("adds a connection to connections list", func() {
 			conn := newConn(nil)
 
 			Expect(hub.connections).To(HaveLen(0))
 
-			hub.registerConn <- conn
-			Tick()
+			hub.registerConn(conn)
 
 			Expect(hub.connections).To(HaveLen(1))
 			Expect(hub.connections[conn.id]).To(Equal(conn))
 		})
 	})
 
-	Describe("unregisterConn channel", func() {
+	Describe("unregisterConn()", func() {
 		It("removes a connection from connections list", func() {
 			conn := newConn(nil)
 
-			hub.registerConn <- conn
-			Tick()
+			hub.registerConn(conn)
 			Expect(hub.connections).To(HaveLen(1))
 
-			hub.unregisterConn <- conn
-			Tick()
+			hub.unregisterConn(conn)
 
 			Expect(hub.connections).To(HaveLen(0))
 			Expect(conn.send).To(BeClosed())
@@ -59,17 +58,19 @@ var _ = Describe("pkg/ws", func() {
 			conn1 := newConn(nil)
 			conn2 := newConn(nil)
 
-			hub.registerConn <- conn1
-			hub.registerConn <- conn2
-			Tick()
+			hub.registerConn(conn1)
+			hub.registerConn(conn2)
 
 			Expect(conn1.send).To(HaveLen(0))
 			Expect(conn2.send).To(HaveLen(0))
 
 			Send(conn1.id, "123", "foo", []byte("foobar777"))
-			Tick()
 
-			Expect(conn1.send).To(HaveLen(1))
+			Eventually(func() Any {
+				return conn1.send
+			}).Should(HaveLen(1))
+
+			time.Sleep(5 * time.Millisecond) // give conn2 more time to receive something
 			Expect(conn2.send).To(HaveLen(0))
 			Expect(<-conn1.send).To(Equal([]byte("m|foo|123|foobar777")))
 		})
@@ -80,18 +81,22 @@ var _ = Describe("pkg/ws", func() {
 			conn1 := newConn(nil)
 			conn2 := newConn(nil)
 
-			hub.registerConn <- conn1
-			hub.registerConn <- conn2
-			Tick()
+			hub.registerConn(conn1)
+			hub.registerConn(conn2)
 
 			Expect(conn1.send).To(HaveLen(0))
 			Expect(conn2.send).To(HaveLen(0))
 
 			Broadcast("foo", []byte("foobar777"))
-			Tick()
 
-			Expect(conn1.send).To(HaveLen(1))
-			Expect(conn2.send).To(HaveLen(1))
+			Eventually(func() Any {
+				return conn1.send
+			}).Should(HaveLen(1))
+
+			Eventually(func() Any {
+				return conn2.send
+			}).Should(HaveLen(1))
+
 			Expect(<-conn1.send).To(Equal([]byte("m|foo||foobar777")))
 			Expect(<-conn2.send).To(Equal([]byte("m|foo||foobar777")))
 		})
@@ -107,7 +112,6 @@ var _ = Describe("pkg/ws", func() {
 			Expect(hub.handlers).To(HaveLen(0))
 
 			RegisterHandler("foo", handler)
-			Tick()
 
 			Expect(hub.handlers).To(HaveLen(1))
 			Expect(handlerCalled).To(BeFalse())
@@ -124,12 +128,9 @@ var _ = Describe("pkg/ws", func() {
 			Expect(hub.handlers).To(HaveLen(0))
 
 			RegisterHandler("foo", handler)
-			Tick()
 			Expect(hub.handlers).To(HaveLen(1))
 
 			UnregisterHandler("foo")
-			Tick()
-
 			Expect(hub.handlers).To(HaveLen(0))
 		})
 	})
@@ -159,18 +160,18 @@ var _ = Describe("pkg/ws", func() {
 			conn1 = newConn(nil)
 			conn2 = newConn(nil)
 
-			hub.registerConn <- conn1
-			hub.registerConn <- conn2
+			hub.registerConn(conn1)
+			hub.registerConn(conn2)
 			RegisterHandler("foo", fooHandler)
 			RegisterHandler("bar", barHandler)
-			Tick()
 
 			parseAndHandleMessage(conn1, []byte("m|foo|123|foobar777"))
-			Tick()
 		})
 
 		It("calls a handler for the message name", func() {
-			Expect(fooHandlerCallArgs).NotTo(BeNil())
+			Eventually(func() Any {
+				return fooHandlerCallArgs
+			}).ShouldNot(BeNil())
 			Expect(fooHandlerCallArgs.name).To(Equal("foo"))
 			Expect(fooHandlerCallArgs.data).To(Equal([]byte("foobar777")))
 			Expect(fooHandlerCallArgs.reply).NotTo(BeNil())
@@ -178,16 +179,21 @@ var _ = Describe("pkg/ws", func() {
 		})
 
 		It("passes a reply func to handler, which when called, sends a reply back to conn", func() {
-			Expect(fooHandlerCallArgs).NotTo(BeNil())
+			Eventually(func() Any {
+				return fooHandlerCallArgs
+			}).ShouldNot(BeNil())
 			Expect(fooHandlerCallArgs.reply).NotTo(BeNil())
 
 			Expect(conn1.send).To(HaveLen(0))
 			Expect(conn2.send).To(HaveLen(0))
 
 			fooHandlerCallArgs.reply([]byte("bazqux2016"))
-			Tick()
 
-			Expect(conn1.send).To(HaveLen(1))
+			Eventually(func() Any {
+				return conn1.send
+			}).Should(HaveLen(1))
+
+			time.Sleep(5 * time.Millisecond) // give conn2 more time to receive something
 			Expect(conn2.send).To(HaveLen(0))
 			Expect(<-conn1.send).To(Equal([]byte("m|foo|123|bazqux2016")))
 		})

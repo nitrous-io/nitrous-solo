@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"bytes"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -38,7 +39,7 @@ func (c *conn) write(mt int, payload []byte) error {
 
 func (c *conn) readPump() {
 	defer func() {
-		hub.unregisterConn <- c
+		hub.unregisterConn(c)
 		c.ws.Close()
 	}()
 	c.ws.SetReadDeadline(time.Now().Add(pongWait))
@@ -55,6 +56,13 @@ func (c *conn) readPump() {
 		if msgType == websocket.TextMessage {
 			parseAndHandleMessage(c, rawMsg)
 		}
+	}
+}
+
+func parseAndHandleMessage(conn *conn, m []byte) {
+	if bytes.HasPrefix(m, []byte("m|")) {
+		parts := bytes.SplitN(m, []byte("|"), 4)
+		hub.handleMessage <- message{connID: conn.id, msgID: string(parts[2]), name: string(parts[1]), data: parts[3]}
 	}
 }
 
