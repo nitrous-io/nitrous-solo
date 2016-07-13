@@ -1,9 +1,11 @@
 package pinghandler
 
-func Ping(name string, data []byte, reply func([]byte)) {
-	if len(data) == 0 {
-		reply([]byte("pong"))
+import "github.com/nitrous-io/nitrous-solo/pkg/ws"
+
+func Ping(c *ws.Context) {
+	if len(c.Data) == 0 {
+		c.Reply([]byte("pong"))
 	} else {
-		reply(data)
+		c.Reply(c.Data)
 	}
 }

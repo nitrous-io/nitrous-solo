@@ -41,8 +41,6 @@ type message struct {
 	data   []byte
 }
 
-type MessageHandlerFunc func(name string, data []byte, reply func([]byte))
-
 func (h *hubType) run() {
 	for {
 		select {
@@ -57,13 +55,24 @@ func (h *hubType) run() {
 			}
 
 		case m := <-h.handleMessage:
+			conn, ok := h.connections[m.connID]
+			if !ok {
+				break
+			}
+
 			if handler, ok := h.handlers[m.name]; ok {
 				name := m.name
+				data := m.data
 				connID := m.connID
 				msgID := m.msgID
 
-				go handler(name, m.data, func(replyData []byte) {
-					Send(connID, msgID, name, replyData)
+				go handler(&Context{
+					Name: name,
+					Data: data,
+					Reply: func(replyData []byte) {
+						Send(connID, msgID, name, replyData)
+					},
+					Meta: conn.meta,
 				})
 			}
 

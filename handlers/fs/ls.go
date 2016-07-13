@@ -8,9 +8,13 @@ import (
 	"strings"
 
 	. "github.com/nitrous-io/nitrous-solo/handlers"
+	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 )
 
-func List(name string, data []byte, reply func([]byte)) {
+func List(c *ws.Context) {
+	data := c.Data
+	reply := c.Reply
+
 	if len(data) == 0 {
 		reply([]byte(""))
 		return
