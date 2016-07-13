@@ -1,7 +1,7 @@
 App.IdeFindInProjectController = Em.Controller.extend
   needs: ['ide', 'ideEditor']
 
-  opsSocketBinding: Em.Binding.oneWay 'controllers.ide.opsSocket'
+  socketBinding: Em.Binding.oneWay 'controllers.ide.socket'
   findInProjectDialog: null
   termBinding: Ember.Binding.oneWay('findInProjectDialog.term')
   locationBinding: Ember.Binding.oneWay('findInProjectDialog.location')
@@ -37,7 +37,7 @@ App.IdeFindInProjectController = Em.Controller.extend
       useRegexp = @get('useRegexp')
       filePattern = @get('filePattern')
 
-      socket = @get('opsSocket')
+      socket = @get('socket')
       editorController = @get('controllers.ideEditor')
       tab = editorController.createTab({ term: term, path: location, multiple: true }, App.SearchResults)
 

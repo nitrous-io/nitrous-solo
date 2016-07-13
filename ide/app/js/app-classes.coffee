@@ -2,6 +2,8 @@ require './backwards-compatibility'
 
 req = require.context('./lib', true, /^(.*\.(coffee$|js$))[^.]*$/igm)
 req(key) for key in req.keys()
+req = require.context('./socket', true, /^(.*\.(coffee$|js$))[^.]*$/igm)
+req(key) for key in req.keys()
 req = require.context('./mixins', true, /^(.*\.(coffee$|js$))[^.]*$/igm)
 req(key) for key in req.keys()
 req = require.context('./models', true, /^(.*\.(coffee$|js$))[^.]*$/igm)

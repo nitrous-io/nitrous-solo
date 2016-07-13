@@ -1,18 +1,18 @@
 App.IdeFileFinderController = Em.Controller.extend
   needs: ['ide', 'ideEditor', 'ideSidebar']
 
-  opsSocketBinding: Em.Binding.oneWay 'controllers.ide.opsSocket'
+  socketBinding: Em.Binding.oneWay 'controllers.ide.socket'
   fileFinderDialog: null
 
   initialize: ->
-    socket = @get 'opsSocket'
+    socket = @get 'socket'
     socket.on 'file_find.output', _.bind(@onOutput, this)
     socket.on 'file_find.error', _.bind(@onError, this)
     socket.on 'file_find.completed', _.bind(@onCompleted, this)
 
   reset: ->
     @set 'fileFinderDialog', null
-    socket = @get 'opsSocket'
+    socket = @get 'socket'
     socket.off 'file_find.output'
     socket.off 'file_find.error'
 
@@ -44,7 +44,7 @@ App.IdeFileFinderController = Em.Controller.extend
 
   startFind: (pattern, path) ->
     dialog = @get 'fileFinderDialog'
-    socket = @get 'opsSocket'
+    socket = @get 'socket'
     return if !dialog || !socket
 
     path = App.get('userMetadata').home_path if not path?.length
@@ -56,7 +56,7 @@ App.IdeFileFinderController = Em.Controller.extend
 
   socketFind: ->
     dialog = @get 'fileFinderDialog'
-    socket = @get 'opsSocket'
+    socket = @get 'socket'
     pattern = @get 'findPattern'
     path = @get 'findPath'
     if dialog && socket && pattern && path
