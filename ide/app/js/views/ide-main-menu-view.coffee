@@ -131,21 +131,21 @@ App.IdeMainMenuView = Em.View.extend
           macKey: ['command+s', 'shift+ctrl+s'], pcKey: ['ctrl+s', 'ctrl+alt+s']
           chromeMacKey: ['command+s', 'shift+ctrl+s'], chromePcKey: ['ctrl+s', 'ctrl+alt+s']
           disabled: (->
-            App.get('router.ideEditorController.hasNoTab') || App.get('router.ideController.opsSocketNotReady')
-          ).property 'App.router.ideEditorController.hasNoTab', 'App.router.ideController.opsSocketNotReady'
+            App.get('router.ideEditorController.hasNoTab') || App.get('router.ideController.socketNotReady')
+          ).property 'App.router.ideEditorController.hasNoTab', 'App.router.ideController.socketNotReady'
           callback: (controller) ->
             controller.fileSave()
         separator
         menuItem 'Refresh Tree',
           macKey: 'shift+ctrl+r', pcKey: 'ctrl+alt+r'
           chromeMacKey: ['shift+command+r', 'shift+ctrl+r'], chromePcKey: ['shift+ctrl+r', 'ctrl+alt+r']
-          disabledBinding: Em.Binding.oneWay('App.router.ideSidebarController.opsSocketNotReady')
+          disabledBinding: Em.Binding.oneWay('App.router.ideSidebarController.socketNotReady')
           callback: (controller) ->
             controller.fileRefreshTree()
         menuItem 'Go to File...',
           macKey: 'shift+ctrl+p', pcKey: 'shift+ctrl+p'
           chromeMacKey: ['command+p', 'shift+ctrl+p'], chromePcKey: ['ctrl+p', 'shift+ctrl+p']
-          disabledBinding: Em.Binding.oneWay('App.router.ideController.opsSocketNotReady')
+          disabledBinding: Em.Binding.oneWay('App.router.ideController.socketNotReady')
           callback: (controller) ->
             controller.fileGoToFile()
         separator
@@ -243,7 +243,7 @@ App.IdeMainMenuView = Em.View.extend
         menuItem 'Find in Files...',
           macKey: 'shift+command+f', pcKey: 'shift+ctrl+f'
           chromeMacKey: 'shift+command+f', chromePcKey: 'shift+ctrl+f'
-          disabledBinding: Em.Binding.oneWay('App.router.ideController.opsSocketNotReady')
+          disabledBinding: Em.Binding.oneWay('App.router.ideController.socketNotReady')
           disabled: true
           callback: (controller) ->
             controller.findFindInFiles()

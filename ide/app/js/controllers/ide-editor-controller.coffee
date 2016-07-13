@@ -13,8 +13,8 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
   chatNotification: null
   tabWatcher: null
 
-  opsSocketBinding: Em.Binding.oneWay 'App.router.ideController.opsSocket'
-  opsSocketReadyBinding: Em.Binding.oneWay 'App.router.ideController.opsSocketReady'
+  socketBinding: Em.Binding.oneWay 'App.router.ideController.socket'
+  socketReadyBinding: Em.Binding.oneWay 'App.router.ideController.socketReady'
 
   collabEnabledBinding: Em.Binding.oneWay 'App.router.ideController.collabEnabled'
   collabSocketBinding: Em.Binding.oneWay 'App.router.ideController.collabSocket'
@@ -53,11 +53,11 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
     CodeMirror.commands.save = (cm) =>
       @saveDocument(@get('activeTab'))
 
-  opsSocketDidStartForTheFirstTime: (->
-    if @get 'opsSocket.startedFirstTime'
-      socket = @get 'opsSocket'
+  socketDidStartForTheFirstTime: (->
+    if @get 'socket.startedFirstTime'
+      socket = @get 'socket'
       socket.on 'fileChanged.output', _.bind(@handleFileChanged, this)
-  ).observes 'opsSocket.startedFirstTime'
+  ).observes 'socket.startedFirstTime'
 
   reset: ->
     @set 'content', null
@@ -87,8 +87,8 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
     return unless tab
     if tab.get('clean') || forceRemove
       if absPath = tab.get('path.absolutePath')
-        opsSocket = @get 'opsSocket'
-        opsSocket.unwatchFile absPath
+        socket = @get 'socket'
+        socket.unwatchFile absPath
 
       @_super(tab)
     else
@@ -117,7 +117,7 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
         sidebar.refreshTextFileContent path
 
   saveDocument: (doc) ->
-    return unless @get 'opsSocketReady'
+    return unless @get 'socketReady'
     return if doc.get('isImageFile')
 
     if path = doc.get 'path'
@@ -126,8 +126,8 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
       if @get 'removeTrailingWhitespaceOnSave'
         doc.set 'removeTrailingWhitespaceTrigger', true
 
-      opsSocket = @get 'opsSocket'
-      opsSocket.writeFile path.get('absolutePath'), doc.get('content'), (err, absolutePath) =>
+      socket = @get 'socket'
+      socket.writeFile path.get('absolutePath'), doc.get('content'), (err, absolutePath) =>
         path.decrementProperty 'loadCount'
         doc.setProperties
           readOnly: false
@@ -143,7 +143,7 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
       @set 'saveDialog', App.SaveDialog.create document: doc
 
   saveNewDocument: ->
-    return unless @get 'opsSocketReady'
+    return unless @get 'socketReady'
     saveDialog = @get 'saveDialog'
     errors = saveDialog.validate()
     return if errors
@@ -157,8 +157,8 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
     absolutePath = "#{homePath}/#{path}"
     doc.set 'readOnly', true
 
-    opsSocket = @get 'opsSocket'
-    opsSocket.writeNewFile absolutePath, docContent, _.bind(@didWriteNewFileContent, this)
+    socket = @get 'socket'
+    socket.writeNewFile absolutePath, docContent, _.bind(@didWriteNewFileContent, this)
 
     @trackActivity()
 
