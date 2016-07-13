@@ -9,6 +9,12 @@
 			"revisionTime": "2016-06-01T11:32:10Z"
 		},
 		{
+			"checksumSHA1": "xgjI2W3RGiQwNlxsOW2V9fJ9kaM=",
+			"path": "github.com/fsnotify/fsnotify",
+			"revision": "a8a77c9133d2d6fd8334f3260d06f60e8d80a5fb",
+			"revisionTime": "2016-06-29T01:11:04Z"
+		},
+		{
 			"checksumSHA1": "0tLUaPu821o4eu5/hQ0wVUQifPU=",
 			"path": "github.com/gin-gonic/gin",
 			"revision": "f931d1ea80ae95a6fc739213cdd9399bd2967fb6",
