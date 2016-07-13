@@ -38,11 +38,11 @@ App.IdeConsoleSessionView = Em.View.extend App.InjectTerminalIframeMixin,
         iframeWindow.NitrousTerminal?.focus?()
   ).observes 'consoleSession.focused'
 
-  opsSocketDidGetDisconnected: (->
+  socketDidGetDisconnected: (->
     terminal = @get 'terminal'
-    if App.get('router.ideController.opsSocketNotReady') && !terminal.closed
+    if App.get('router.ideController.socketNotReady') && !terminal.closed
       terminal.close(true) # close, but permit reconnection
-  ).observes 'App.router.ideController.opsSocketNotReady'
+  ).observes 'App.router.ideController.socketNotReady'
 
   didChangeOrientation: ->
     window.setTimeout(=>
