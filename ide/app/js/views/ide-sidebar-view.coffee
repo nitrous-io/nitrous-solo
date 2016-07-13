@@ -4,7 +4,7 @@ App.IdeSidebarView = Em.View.extend
   classNameBindings: ['App.fileTreeHidden:hidden']
 
   showContextMenu: (event, path) ->
-    return if @get('controller.opsSocketNotReady') || path.get('loading')
+    return if @get('controller.socketNotReady') || path.get('loading')
     contextMenuView = @get 'contextMenuView'
     contextMenuView.show event, path
 

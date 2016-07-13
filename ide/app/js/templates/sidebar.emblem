@@ -3,7 +3,7 @@
     h2 title={App.router.ideController.content.name}
       = App.router.ideController.content.name
     .ide-toolbar-btns
-      .ui.dropdown.btn.icon title='Settings' disabled=opsSocketNotReady
+      .ui.dropdown.btn.icon title='Settings' disabled=socketNotReady
         span.more-icn
         ul.dropdown-menu.right
           li
