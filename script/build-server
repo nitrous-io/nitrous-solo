@@ -8,5 +8,5 @@ BUILD_DIR="build/$NITROUS_ENV"
 configPkg="github.com/nitrous-io/nitrous-solo/config"
 buildLdFlags="-X $configPkg.Env=$NITROUS_ENV"
 
-cd $DIR/..
-$DIR/env go build -ldflags "$buildLdFlags" -o "$BUILD_DIR/nitrous" nitrous.go
+cd "$DIR/.."
+"$DIR/env" go build -o "$BUILD_DIR/nitrous" -ldflags "$buildLdFlags" nitrous.go

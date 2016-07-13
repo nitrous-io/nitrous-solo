@@ -5,7 +5,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export NITROUS_ENV=${NITROUS_ENV:-"development"}
 BUILD_DIR="build/$NITROUS_ENV"
 
-cd $DIR/..
+cd "$DIR/.."
 script/build-server
 script/build-ide
-"$BUILD_DIR/nitrous -b 127.0.0.1:6877"
+"$BUILD_DIR/nitrous" -b 127.0.0.1:6877
