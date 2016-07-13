@@ -5,13 +5,20 @@ import (
 	"time"
 
 	. "github.com/nitrous-io/nitrous-solo/testhelper"
-	. "github.com/onsi/ginkgo"
+	ginkgo "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
+var (
+	BeforeEach = ginkgo.BeforeEach
+	AfterEach  = ginkgo.AfterEach
+	Describe   = ginkgo.Describe
+	It         = ginkgo.It
+)
+
 func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "pkg/ws")
+	RegisterFailHandler(ginkgo.Fail)
+	ginkgo.RunSpecs(t, "pkg/ws")
 }
 
 func resetHub() {
@@ -105,7 +112,7 @@ var _ = Describe("pkg/ws", func() {
 	Describe("RegisterHandler()", func() {
 		It("registers a message handler", func() {
 			handlerCalled := false
-			handler := func(name string, data []byte, reply func([]byte)) {
+			handler := func(c *Context) {
 				handlerCalled = true
 			}
 
@@ -116,14 +123,14 @@ var _ = Describe("pkg/ws", func() {
 			Expect(hub.handlers).To(HaveLen(1))
 			Expect(handlerCalled).To(BeFalse())
 
-			hub.handlers["foo"]("foo", nil, nil)
+			hub.handlers["foo"](nil)
 			Expect(handlerCalled).To(BeTrue())
 		})
 	})
 
 	Describe("UnregisterHandler()", func() {
 		It("unregisters a message handler", func() {
-			handler := func(name string, data []byte, reply func([]byte)) {}
+			handler := func(*Context) {}
 
 			Expect(hub.handlers).To(HaveLen(0))
 
@@ -136,25 +143,19 @@ var _ = Describe("pkg/ws", func() {
 	})
 
 	Describe("parseAndHandleMessage()", func() {
-		type handlerCallArgs struct {
-			name  string
-			data  []byte
-			reply func([]byte)
-		}
-
-		var fooHandlerCallArgs, barHandlerCallArgs *handlerCallArgs
+		var fooHandlerCallContext, barHandlerCallContext *Context
 		var conn1, conn2 *conn
 
 		BeforeEach(func() {
-			fooHandlerCallArgs = nil
-			barHandlerCallArgs = nil
+			fooHandlerCallContext = nil
+			barHandlerCallContext = nil
 
-			fooHandler := func(name string, data []byte, reply func([]byte)) {
-				fooHandlerCallArgs = &handlerCallArgs{name, data, reply}
+			fooHandler := func(c *Context) {
+				fooHandlerCallContext = c
 			}
 
-			barHandler := func(name string, data []byte, reply func([]byte)) {
-				barHandlerCallArgs = &handlerCallArgs{name, data, reply}
+			barHandler := func(c *Context) {
+				barHandlerCallContext = c
 			}
 
 			conn1 = newConn(nil)
@@ -170,24 +171,24 @@ var _ = Describe("pkg/ws", func() {
 
 		It("calls a handler for the message name", func() {
 			Eventually(func() Any {
-				return fooHandlerCallArgs
+				return fooHandlerCallContext
 			}).ShouldNot(BeNil())
-			Expect(fooHandlerCallArgs.name).To(Equal("foo"))
-			Expect(fooHandlerCallArgs.data).To(Equal([]byte("foobar777")))
-			Expect(fooHandlerCallArgs.reply).NotTo(BeNil())
-			Expect(barHandlerCallArgs).To(BeNil())
+			Expect(fooHandlerCallContext.Name).To(Equal("foo"))
+			Expect(fooHandlerCallContext.Data).To(Equal([]byte("foobar777")))
+			Expect(fooHandlerCallContext.Reply).NotTo(BeNil())
+			Expect(barHandlerCallContext).To(BeNil())
 		})
 
 		It("passes a reply func to handler, which when called, sends a reply back to conn", func() {
 			Eventually(func() Any {
-				return fooHandlerCallArgs
+				return fooHandlerCallContext
 			}).ShouldNot(BeNil())
-			Expect(fooHandlerCallArgs.reply).NotTo(BeNil())
+			Expect(fooHandlerCallContext.Reply).NotTo(BeNil())
 
 			Expect(conn1.send).To(HaveLen(0))
 			Expect(conn2.send).To(HaveLen(0))
 
-			fooHandlerCallArgs.reply([]byte("bazqux2016"))
+			fooHandlerCallContext.Reply([]byte("bazqux2016"))
 
 			Eventually(func() Any {
 				return conn1.send

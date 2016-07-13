@@ -2,12 +2,24 @@ package ws
 
 import "net/http"
 
-func Upgrade(w http.ResponseWriter, r *http.Request) error {
+type M map[string]interface{}
+
+type MessageHandlerFunc func(c *Context)
+
+type Context struct {
+	Name  string
+	Data  []byte
+	Reply func([]byte)
+	Meta  M
+}
+
+func Upgrade(w http.ResponseWriter, r *http.Request, meta map[string]interface{}) error {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return err
 	}
 	c := newConn(ws)
+	c.meta = meta
 	c.send <- []byte("reg|" + c.id)
 	hub.registerConn(c)
 

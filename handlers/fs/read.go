@@ -11,11 +11,15 @@ import (
 	"strings"
 
 	. "github.com/nitrous-io/nitrous-solo/handlers"
+	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 )
 
 var FileSizeLimit int64 = 50 * 1024 * 1024
 
-func Read(name string, data []byte, reply func([]byte)) {
+func Read(c *ws.Context) {
+	data := c.Data
+	reply := c.Reply
+
 	if len(data) == 0 {
 		reply([]byte(""))
 		return

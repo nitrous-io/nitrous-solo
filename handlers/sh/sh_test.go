@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/nitrous-io/nitrous-solo/handlers/sh"
+	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 	. "github.com/nitrous-io/nitrous-solo/testhelper"
 	"github.com/nitrous-io/nitrous-solo/testhelper/fake"
 	. "github.com/onsi/ginkgo"
@@ -88,8 +89,10 @@ var _ = Describe("sh", func() {
 		Context("when 'cmd' param is missing", func() {
 			It("replies with an error", func() {
 				delete(params, "cmd")
-				sh.Start("sh.start", EncodeJSON(params), cb)
-
+				sh.Start(&ws.Context{
+					Data:  EncodeJSON(params),
+					Reply: cb,
+				})
 				j := parseResponseJSON()
 				Expect(j["error"]).To(Equal("invalid_params"))
 			})
@@ -98,8 +101,10 @@ var _ = Describe("sh", func() {
 		Context("when 'run_as' param is missing", func() {
 			It("replies with an error", func() {
 				delete(params, "run_as")
-				sh.Start("sh.start", EncodeJSON(params), cb)
-
+				sh.Start(&ws.Context{
+					Data:  EncodeJSON(params),
+					Reply: cb,
+				})
 				j := parseResponseJSON()
 				Expect(j["error"]).To(Equal("invalid_params"))
 			})
@@ -109,8 +114,10 @@ var _ = Describe("sh", func() {
 			Context("when shell session fails to start", func() {
 				It("replies with an error", func() {
 					fake.ShellStartAndAttachError = errors.New("command not found")
-					sh.Start("sh.start", EncodeJSON(params), cb)
-
+					sh.Start(&ws.Context{
+						Data:  EncodeJSON(params),
+						Reply: cb,
+					})
 					j := parseResponseJSON()
 					Expect(j["error"]).To(Equal("failed_to_start_shell_session"))
 					Expect(j["error_description"]).To(Equal("command not found"))
@@ -121,7 +128,10 @@ var _ = Describe("sh", func() {
 				It("starts a shell session with minimum cols and rows and replies with subscription and shell session ids", func() {
 					params["cols"] = 1
 					params["rows"] = 1
-					sh.Start("sh.start", EncodeJSON(params), cb)
+					sh.Start(&ws.Context{
+						Data:  EncodeJSON(params),
+						Reply: cb,
+					})
 
 					Expect(fake.ShellStartAndAttachCalls.Count()).To(Equal(1))
 					call := fake.ShellStartAndAttachCalls.NthCall(1)
@@ -144,7 +154,10 @@ var _ = Describe("sh", func() {
 
 			Context("when there is no other issue", func() {
 				It("starts a shell session and replies with subscription and shell session ids", func() {
-					sh.Start("sh.start", EncodeJSON(params), cb)
+					sh.Start(&ws.Context{
+						Data:  EncodeJSON(params),
+						Reply: cb,
+					})
 
 					Expect(fake.ShellStartAndAttachCalls.Count()).To(Equal(1))
 					call := fake.ShellStartAndAttachCalls.NthCall(1)
@@ -181,8 +194,10 @@ var _ = Describe("sh", func() {
 		Context("when 'shell_session_id' param is missing", func() {
 			It("replies with an error", func() {
 				delete(params, "shell_session_id")
-				sh.Attach("sh.attach", EncodeJSON(params), cb)
-
+				sh.Attach(&ws.Context{
+					Data:  EncodeJSON(params),
+					Reply: cb,
+				})
 				j := parseResponseJSON()
 				Expect(j["error"]).To(Equal("invalid_params"))
 			})
@@ -192,7 +207,10 @@ var _ = Describe("sh", func() {
 			It("attaches with minimum cols and rows and replies with a subscription id", func() {
 				params["cols"] = 1
 				params["rows"] = 1
-				sh.Attach("sh.attach", EncodeJSON(params), cb)
+				sh.Attach(&ws.Context{
+					Data:  EncodeJSON(params),
+					Reply: cb,
+				})
 
 				Expect(fake.ShellAttachCalls.Count()).To(Equal(1))
 				call := fake.ShellAttachCalls.NthCall(1)
@@ -210,7 +228,10 @@ var _ = Describe("sh", func() {
 
 		Context("when there is no other issue", func() {
 			It("attaches to a shell session and replies with a subscription id", func() {
-				sh.Attach("sh.attach", EncodeJSON(params), cb)
+				sh.Attach(&ws.Context{
+					Data:  EncodeJSON(params),
+					Reply: cb,
+				})
 
 				Expect(fake.ShellAttachCalls.Count()).To(Equal(1))
 				call := fake.ShellAttachCalls.NthCall(1)
@@ -240,8 +261,10 @@ var _ = Describe("sh", func() {
 		Context("when 'shell_session_id' param is missing", func() {
 			It("replies with an error", func() {
 				delete(params, "shell_session_id")
-				sh.Detach("sh.detach", EncodeJSON(params), cb)
-
+				sh.Detach(&ws.Context{
+					Data:  EncodeJSON(params),
+					Reply: cb,
+				})
 				j := parseResponseJSON()
 				Expect(j["error"]).To(Equal("invalid_params"))
 			})
@@ -250,8 +273,10 @@ var _ = Describe("sh", func() {
 		Context("when 'subscription_id' param is missing", func() {
 			It("replies with an error", func() {
 				delete(params, "subscription_id")
-				sh.Detach("sh.detach", EncodeJSON(params), cb)
-
+				sh.Detach(&ws.Context{
+					Data:  EncodeJSON(params),
+					Reply: cb,
+				})
 				j := parseResponseJSON()
 				Expect(j["error"]).To(Equal("invalid_params"))
 			})
@@ -259,7 +284,10 @@ var _ = Describe("sh", func() {
 
 		Context("when there is no other issue", func() {
 			It("detaches from the shell session with minimum cols and rows and replies with subscription id", func() {
-				sh.Detach("sh.detach", EncodeJSON(params), cb)
+				sh.Detach(&ws.Context{
+					Data:  EncodeJSON(params),
+					Reply: cb,
+				})
 
 				Expect(fake.ShellDetachCalls.Count()).To(Equal(1))
 				call := fake.ShellDetachCalls.NthCall(1)
@@ -287,8 +315,9 @@ var _ = Describe("sh", func() {
 		Context("when the params array is empty", func() {
 			It("does nothing", func() {
 				params = A{}
-				sh.Input("sh.i", EncodeJSON(params), cb)
-
+				sh.Input(&ws.Context{
+					Data: EncodeJSON(params),
+				})
 				Expect(fake.ShellInputCalls.Count()).To(BeZero())
 			})
 		})
@@ -296,15 +325,18 @@ var _ = Describe("sh", func() {
 		Context("when the params array has only one element", func() {
 			It("does nothing", func() {
 				params = A{"1234"}
-				sh.Input("sh.i", EncodeJSON(params), cb)
-
+				sh.Input(&ws.Context{
+					Data: EncodeJSON(params),
+				})
 				Expect(fake.ShellInputCalls.Count()).To(BeZero())
 			})
 		})
 
 		Context("when params are valid", func() {
 			It("decodes the base64-encoded data and sends an input to a shell session", func() {
-				sh.Input("sh.i", EncodeJSON(params), cb)
+				sh.Input(&ws.Context{
+					Data: EncodeJSON(params),
+				})
 
 				Expect(fake.ShellInputCalls.Count()).To(Equal(1))
 				call := fake.ShellInputCalls.NthCall(1)
@@ -330,8 +362,9 @@ var _ = Describe("sh", func() {
 		Context("when the params array is empty", func() {
 			It("does nothing", func() {
 				params = A{}
-				sh.Resize("sh.r", EncodeJSON(params), cb)
-
+				sh.Resize(&ws.Context{
+					Data: EncodeJSON(params),
+				})
 				Expect(fake.ShellResizeCalls.Count()).To(BeZero())
 			})
 
@@ -340,15 +373,18 @@ var _ = Describe("sh", func() {
 		Context("when the params array has less than three elements", func() {
 			It("does nothing", func() {
 				params = A{"1234", 80}
-				sh.Resize("sh.r", EncodeJSON(params), cb)
-
+				sh.Resize(&ws.Context{
+					Data: EncodeJSON(params),
+				})
 				Expect(fake.ShellResizeCalls.Count()).To(BeZero())
 			})
 		})
 
 		Context("when params are valid", func() {
 			It("sends a resize message to a shell session", func() {
-				sh.Resize("sh.r", EncodeJSON(params), cb)
+				sh.Resize(&ws.Context{
+					Data: EncodeJSON(params),
+				})
 
 				Expect(fake.ShellResizeCalls.Count()).To(Equal(1))
 				call := fake.ShellResizeCalls.NthCall(1)
@@ -373,7 +409,9 @@ var _ = Describe("sh", func() {
 		Context("when 'shell_session_id' param is missing", func() {
 			It("does nothing", func() {
 				delete(params, "shell_session_id")
-				sh.Kill("sh.kill", EncodeJSON(params), cb)
+				sh.Kill(&ws.Context{
+					Data: EncodeJSON(params),
+				})
 
 				Expect(fake.ShellKillCalls.Count()).To(BeZero())
 			})
@@ -381,7 +419,9 @@ var _ = Describe("sh", func() {
 
 		Context("when params are valid", func() {
 			It("sends a kill message to a shell session", func() {
-				sh.Kill("sh.kill", EncodeJSON(params), cb)
+				sh.Kill(&ws.Context{
+					Data: EncodeJSON(params),
+				})
 
 				Expect(fake.ShellKillCalls.Count()).To(Equal(1))
 				call := fake.ShellKillCalls.NthCall(1)
@@ -394,7 +434,9 @@ var _ = Describe("sh", func() {
 
 	Describe("List", func() {
 		It("asks for a list of shell sessions with a reply func", func() {
-			sh.List("sh.list", nil, cb)
+			sh.List(&ws.Context{
+				Reply: cb,
+			})
 
 			Expect(fake.ShellListCalls.Count()).To(Equal(1))
 			call := fake.ShellListCalls.NthCall(1)

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/nitrous-io/nitrous-solo/handlers/fs"
+	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 	. "github.com/nitrous-io/nitrous-solo/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -29,7 +30,10 @@ var _ = Describe("fs.Read", func() {
 
 	Context("when the file at the given path has a recognized text file extension", func() {
 		It("returns file content", func() {
-			fs.Read("fs.read", EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "code.rb")}), cb)
+			fs.Read(&ws.Context{
+				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "code.rb")}),
+				Reply: cb,
+			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
 			Expect(j["type"]).To(Equal("text"))
@@ -39,7 +43,10 @@ var _ = Describe("fs.Read", func() {
 
 	Context("when the file at the given path has a recognized text file filename", func() {
 		It("returns file content", func() {
-			fs.Read("fs.read", EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "Gemfile")}), cb)
+			fs.Read(&ws.Context{
+				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "Gemfile")}),
+				Reply: cb,
+			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
 			Expect(j["type"]).To(Equal("text"))
@@ -49,7 +56,10 @@ var _ = Describe("fs.Read", func() {
 
 	Context("when the file at the given path is empty", func() {
 		It("returns file content", func() {
-			fs.Read("fs.read", EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "foo")}), cb)
+			fs.Read(&ws.Context{
+				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "foo")}),
+				Reply: cb,
+			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
 			Expect(j["type"]).To(Equal("text"))
@@ -59,7 +69,10 @@ var _ = Describe("fs.Read", func() {
 
 	Context("when the file at the given path has a recognized image file extension", func() {
 		It("returns file content, encoded in base64", func() {
-			fs.Read("fs.read", EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "tiny.gif")}), cb)
+			fs.Read(&ws.Context{
+				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "tiny.gif")}),
+				Reply: cb,
+			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
 			Expect(j["type"]).To(Equal("image"))
@@ -69,7 +82,10 @@ var _ = Describe("fs.Read", func() {
 
 	Context("when the file at the given path is recognized as a text file", func() {
 		It("returns file content", func() {
-			fs.Read("fs.read", EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "baz")}), cb)
+			fs.Read(&ws.Context{
+				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "baz")}),
+				Reply: cb,
+			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
 			Expect(j["type"]).To(Equal("text"))
@@ -79,7 +95,10 @@ var _ = Describe("fs.Read", func() {
 
 	Context("when the file at the given path is an unrecognized file", func() {
 		It("returns an error", func() {
-			fs.Read("fs.read", EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "binaryfile")}), cb)
+			fs.Read(&ws.Context{
+				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "binaryfile")}),
+				Reply: cb,
+			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
 			Expect(j["error"]).To(Equal("unrecognized_file_type"))
@@ -88,7 +107,10 @@ var _ = Describe("fs.Read", func() {
 
 	Context("when the given path is a symlink to a readable file", func() {
 		It("returns file content", func() {
-			fs.Read("fs.read", EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "filesymlink")}), cb)
+			fs.Read(&ws.Context{
+				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "filesymlink")}),
+				Reply: cb,
+			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
 			Expect(j["type"]).To(Equal("text"))
@@ -98,7 +120,10 @@ var _ = Describe("fs.Read", func() {
 
 	Context("when the given path is an empty string", func() {
 		It("returns an error", func() {
-			fs.Read("fs.read", EncodeJSON(H{"path": ""}), cb)
+			fs.Read(&ws.Context{
+				Data:  EncodeJSON(H{"path": ""}),
+				Reply: cb,
+			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
 			Expect(j["error"]).To(Equal("invalid_path"))
@@ -107,7 +132,10 @@ var _ = Describe("fs.Read", func() {
 
 	Context("when the given path does not exist", func() {
 		It("returns an error", func() {
-			fs.Read("fs.read", EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "code.java")}), cb)
+			fs.Read(&ws.Context{
+				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "code.java")}),
+				Reply: cb,
+			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
 			Expect(j["error"]).To(Equal("invalid_path"))
@@ -116,7 +144,10 @@ var _ = Describe("fs.Read", func() {
 
 	Context("when the given path is a directory", func() {
 		It("returns an error", func() {
-			fs.Read("fs.read", EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "bar")}), cb)
+			fs.Read(&ws.Context{
+				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "bar")}),
+				Reply: cb,
+			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
 			Expect(j["error"]).To(Equal("path_not_file"))
@@ -125,7 +156,10 @@ var _ = Describe("fs.Read", func() {
 
 	Context("when the given path is a symlink to a directory", func() {
 		It("returns an error", func() {
-			fs.Read("fs.read", EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "dirsymlink")}), cb)
+			fs.Read(&ws.Context{
+				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "dirsymlink")}),
+				Reply: cb,
+			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
 			Expect(j["error"]).To(Equal("path_not_file"))
@@ -134,7 +168,10 @@ var _ = Describe("fs.Read", func() {
 
 	Context("when the given path is a broken symlink", func() {
 		It("returns an error", func() {
-			fs.Read("fs.read", EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "brokensymlink")}), cb)
+			fs.Read(&ws.Context{
+				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "brokensymlink")}),
+				Reply: cb,
+			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
 			Expect(j["error"]).To(Equal("invalid_path"))
@@ -143,7 +180,10 @@ var _ = Describe("fs.Read", func() {
 
 	Context("when the given path is a recursive symlink", func() {
 		It("returns an error", func() {
-			fs.Read("fs.read", EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "recursymlink1")}), cb)
+			fs.Read(&ws.Context{
+				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "recursymlink1")}),
+				Reply: cb,
+			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
 			Expect(j["error"]).To(Equal("symlink_too_deep"))
@@ -157,8 +197,10 @@ var _ = Describe("fs.Read", func() {
 			defer func() {
 				fs.FileSizeLimit = origLimit
 			}()
-
-			fs.Read("fs.read", EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "code.rb")}), cb)
+			fs.Read(&ws.Context{
+				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "code.rb")}),
+				Reply: cb,
+			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
 			Expect(j["error"]).To(Equal("file_too_big"))

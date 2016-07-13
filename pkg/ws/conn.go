@@ -22,6 +22,7 @@ type conn struct {
 	ws   *websocket.Conn
 	send chan []byte
 	id   string
+	meta map[string]interface{}
 }
 
 func newConn(ws *websocket.Conn) *conn {
@@ -29,6 +30,7 @@ func newConn(ws *websocket.Conn) *conn {
 		send: make(chan []byte, 256),
 		ws:   ws,
 		id:   uuid.NewV4().String(),
+		meta: map[string]interface{}{},
 	}
 }
 

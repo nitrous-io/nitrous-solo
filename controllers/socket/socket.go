@@ -18,7 +18,8 @@ func Socket(c *gin.Context) {
 		return
 	}
 
-	if ud := controllers.GetUserDataByToken(tok); ud == nil {
+	ud := controllers.GetUserDataByToken(tok)
+	if ud == nil {
 		c.JSON(422, gin.H{
 			"error": "invalid_credentials",
 			"errors": map[string]string{
@@ -28,7 +29,10 @@ func Socket(c *gin.Context) {
 		return
 	}
 
-	if err := ws.Upgrade(c.Writer, c.Request); err != nil {
+	if err := ws.Upgrade(c.Writer, c.Request, ws.M{
+		"login": ud.Login,
+		"user":  ud.User,
+	}); err != nil {
 		controllers.InternalServerError(c, err)
 		return
 	}

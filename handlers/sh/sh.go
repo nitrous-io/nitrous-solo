@@ -6,6 +6,7 @@ import (
 
 	. "github.com/nitrous-io/nitrous-solo/handlers"
 	"github.com/nitrous-io/nitrous-solo/pkg/shell"
+	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 )
 
 var (
@@ -18,7 +19,10 @@ var (
 	ShellList           = shell.List
 )
 
-func Start(name string, data []byte, reply func([]byte)) {
+func Start(c *ws.Context) {
+	data := c.Data
+	reply := c.Reply
+
 	if len(data) == 0 {
 		reply([]byte(""))
 		return
@@ -71,7 +75,10 @@ func Start(name string, data []byte, reply func([]byte)) {
 	}, reply)
 }
 
-func Attach(name string, data []byte, reply func([]byte)) {
+func Attach(c *ws.Context) {
+	data := c.Data
+	reply := c.Reply
+
 	if len(data) == 0 {
 		reply([]byte(""))
 		return
@@ -108,7 +115,10 @@ func Attach(name string, data []byte, reply func([]byte)) {
 	}, reply)
 }
 
-func Detach(name string, data []byte, reply func([]byte)) {
+func Detach(c *ws.Context) {
+	data := c.Data
+	reply := c.Reply
+
 	if len(data) == 0 {
 		reply([]byte(""))
 		return
@@ -136,8 +146,9 @@ func Detach(name string, data []byte, reply func([]byte)) {
 	}, reply)
 }
 
-func Input(name string, data []byte, reply func([]byte)) {
-	// this handler does not reply
+func Input(c *ws.Context) {
+	data := c.Data
+
 	if len(data) == 0 {
 		return
 	}
@@ -164,8 +175,9 @@ func Input(name string, data []byte, reply func([]byte)) {
 	ShellInput(shellSessionID, data)
 }
 
-func Resize(name string, data []byte, reply func([]byte)) {
-	// this handler does not reply
+func Resize(c *ws.Context) {
+	data := c.Data
+
 	if len(data) == 0 {
 		return
 	}
@@ -207,8 +219,9 @@ func Resize(name string, data []byte, reply func([]byte)) {
 	ShellResize(shellSessionID, uint(cols), uint(rows))
 }
 
-func Kill(name string, data []byte, reply func([]byte)) {
-	// this handler does not reply
+func Kill(c *ws.Context) {
+	data := c.Data
+
 	if len(data) == 0 {
 		return
 	}
@@ -228,6 +241,6 @@ func Kill(name string, data []byte, reply func([]byte)) {
 	ShellKill(j.ShellSessionID)
 }
 
-func List(name string, data []byte, reply func([]byte)) {
-	ShellList(reply)
+func List(c *ws.Context) {
+	ShellList(c.Reply)
 }
