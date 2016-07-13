@@ -9,9 +9,25 @@ func Upgrade(w http.ResponseWriter, r *http.Request) error {
 	}
 	c := newConn(ws)
 	c.send <- []byte("reg|" + c.id)
-	hub.registerConn <- c
+	hub.registerConn(c)
 
 	go c.writePump()
 	c.readPump()
 	return nil
+}
+
+func Send(connID, msgID, name string, data []byte) {
+	hub.send <- message{connID: connID, msgID: msgID, name: name, data: data}
+}
+
+func Broadcast(name string, data []byte) {
+	hub.broadcast <- message{name: name, data: data}
+}
+
+func RegisterHandler(msgName string, handler MessageHandlerFunc) {
+	hub.registerHandler(msgName, handler)
+}
+
+func UnregisterHandler(msgName string) {
+	hub.unregisterHandler(msgName)
 }

@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"reflect"
-	"runtime"
-	"time"
 
 	. "github.com/onsi/gomega"
 )
@@ -18,11 +16,6 @@ func EncodeJSON(h interface{}) []byte {
 	j, err := json.Marshal(h)
 	Expect(err).To(BeNil())
 	return j
-}
-
-func Tick() {
-	runtime.Gosched()
-	time.Sleep(10 * time.Millisecond)
 }
 
 func ExpectSameFunc(a interface{}, b interface{}) {

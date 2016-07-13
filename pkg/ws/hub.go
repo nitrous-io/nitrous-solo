@@ -1,6 +1,6 @@
 package ws
 
-import "bytes"
+import "sync"
 
 var hub *hubType
 
@@ -12,14 +12,11 @@ func init() {
 type hubType struct {
 	connections map[string]*conn
 	handlers    map[string]MessageHandlerFunc
+	lock        sync.Mutex
 
-	send              chan message
-	broadcast         chan message
-	registerConn      chan *conn
-	unregisterConn    chan *conn
-	registerHandler   chan messageHandler
-	unregisterHandler chan string
-	handleMessage     chan message
+	send          chan message
+	broadcast     chan message
+	handleMessage chan message
 
 	stop chan struct{}
 }
@@ -29,13 +26,9 @@ func newHub() *hubType {
 		connections: map[string]*conn{},
 		handlers:    map[string]MessageHandlerFunc{},
 
-		send:              make(chan message, 256),
-		broadcast:         make(chan message, 256),
-		registerConn:      make(chan *conn),
-		unregisterConn:    make(chan *conn),
-		registerHandler:   make(chan messageHandler),
-		unregisterHandler: make(chan string),
-		handleMessage:     make(chan message, 256),
+		send:          make(chan message, 256),
+		broadcast:     make(chan message, 256),
+		handleMessage: make(chan message, 256),
 
 		stop: make(chan struct{}),
 	}
@@ -50,23 +43,9 @@ type message struct {
 
 type MessageHandlerFunc func(name string, data []byte, reply func([]byte))
 
-type messageHandler struct {
-	msgName     string
-	handlerFunc MessageHandlerFunc
-}
-
 func (h *hubType) run() {
 	for {
 		select {
-		case c := <-h.registerConn:
-			h.connections[c.id] = c
-
-		case c := <-h.unregisterConn:
-			if _, ok := h.connections[c.id]; ok {
-				delete(h.connections, c.id)
-				close(c.send)
-			}
-
 		case m := <-h.send:
 			if c, ok := h.connections[m.connID]; ok {
 				c.send <- append([]byte("m|"+m.name+"|"+m.msgID+"|"), m.data...)
@@ -76,12 +55,6 @@ func (h *hubType) run() {
 			for _, c := range h.connections {
 				c.send <- append([]byte("m|"+m.name+"||"), m.data...)
 			}
-
-		case handler := <-h.registerHandler:
-			h.handlers[handler.msgName] = handler.handlerFunc
-
-		case msgName := <-h.unregisterHandler:
-			delete(h.handlers, msgName)
 
 		case m := <-h.handleMessage:
 			if handler, ok := h.handlers[m.name]; ok {
@@ -97,10 +70,6 @@ func (h *hubType) run() {
 		case <-h.stop:
 			close(h.send)
 			close(h.broadcast)
-			close(h.registerConn)
-			close(h.unregisterConn)
-			close(h.registerHandler)
-			close(h.unregisterHandler)
 			close(h.handleMessage)
 			close(h.stop)
 			return // exit function
@@ -108,25 +77,29 @@ func (h *hubType) run() {
 	}
 }
 
-func parseAndHandleMessage(conn *conn, m []byte) {
-	if bytes.HasPrefix(m, []byte("m|")) {
-		parts := bytes.SplitN(m, []byte("|"), 4)
-		hub.handleMessage <- message{connID: conn.id, msgID: string(parts[2]), name: string(parts[1]), data: parts[3]}
+func (h *hubType) registerConn(c *conn) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	h.connections[c.id] = c
+}
+
+func (h *hubType) unregisterConn(c *conn) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	if _, ok := h.connections[c.id]; ok {
+		delete(h.connections, c.id)
+		close(c.send)
 	}
 }
 
-func Send(connID, msgID, name string, data []byte) {
-	hub.send <- message{connID: connID, msgID: msgID, name: name, data: data}
+func (h *hubType) registerHandler(msgName string, handler MessageHandlerFunc) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	h.handlers[msgName] = handler
 }
 
-func Broadcast(name string, data []byte) {
-	hub.broadcast <- message{name: name, data: data}
-}
-
-func RegisterHandler(msgName string, handler MessageHandlerFunc) {
-	hub.registerHandler <- messageHandler{msgName, handler}
-}
-
-func UnregisterHandler(msgName string) {
-	hub.unregisterHandler <- msgName
+func (h *hubType) unregisterHandler(msgName string) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	delete(h.handlers, msgName)
 }
