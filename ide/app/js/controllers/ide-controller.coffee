@@ -3,31 +3,31 @@ freighterFeaturesRetry = 3000 # 3s
 App.IdeController = Em.ObjectController.extend
   needs: ['ideFindInProject', 'ideFileFinder']
 
-  opsSocket: null
+  socket: null
   collabSocket: null
   collabEnabled: true
 
   repository: null
   errorDialog: null
 
-  opsTimeoutAlert: null
-  opsConnectionGracePeriod: 15 * 1000 # TODO: This should come from a KeyValue object from the server-side
-  opsConnectionLost: false
+  socketTimeoutAlert: null
+  socketConnectionGracePeriod: 15 * 1000
+  socketConnectionLost: false
 
-  opsSocketReadyBinding: Em.Binding.oneWay 'opsSocket.started'
-  opsSocketNotReady: Em.computed.not 'opsSocketReady'
+  socketReadyBinding: Em.Binding.oneWay 'socket.started'
+  socketNotReady: Em.computed.not 'socketReady'
 
   collabSocketReadyBinding: Em.Binding.oneWay 'collabSocket.started'
   collabSocketNotReady: Em.computed.not 'collabSocketReady'
 
   ideSocketsReady: (->
-    return false if !@get('opsSocketReady')
+    return false if !@get('socketReady')
 
     if @get('collabEnabled')
       return @get('collabSocketReady')
 
     return true
-  ).property 'opsSocketReady', 'collabSocketReady', 'collabEnabled'
+  ).property 'socketReady', 'collabSocketReady', 'collabEnabled'
 
   ideSocketsNotReady: Em.computed.not 'ideSocketsReady'
 
@@ -39,10 +39,13 @@ App.IdeController = Em.ObjectController.extend
     router.get('ideEditorController').initialize()
     router.get('ideConsoleController').initialize()
 
+    @set 'socket', socket = App.Socket.create()
+    socket.connect()
+
   reset: ->
-    if opsSocket = @get 'opsSocket'
-      opsSocket.disconnect()
-      opsSocket.destroy()
+    if socket = @get 'socket'
+      socket.disconnect()
+      socket.destroy()
 
     router = App.get 'router'
     router.get('ideConsoleController').reset()
@@ -51,34 +54,27 @@ App.IdeController = Em.ObjectController.extend
     router.get('ideMainMenuController').reset()
     router.get('ideLayoutController').reset()
 
-    @set 'opsSocket', null
+    @set 'socket', null
     @set 'repository', null
     @set 'content', null
     @set 'errorDialog', null
     @set 'resumeSessionDialog', null
     @set 'startProjectDialog', null
 
-  opsSocketDisconnected: (->
-    unless @get('opsSocketReady')
-      opsTimeoutAlert = Em.run.later this, (->
-        @set 'opsConnectionLost', true
-      ), @get('opsConnectionGracePeriod')
+  socketDisconnected: (->
+    unless @get('socketReady')
+      socketTimeoutAlert = Em.run.later this, (->
+        @set 'socketConnectionLost', true
+      ), @get('socketConnectionGracePeriod')
 
-      @set 'opsTimeoutAlert', opsTimeoutAlert
-  ).observes 'opsSocketReady'
+      @set 'socketTimeoutAlert', socketTimeoutAlert
+  ).observes 'socketReady'
 
-  opsSocketConnected: (->
-    if @get('opsSocketReady') && (opsTimeoutAlert = @get('opsTimeoutAlert'))
-      Em.run.cancel opsTimeoutAlert
-      @set 'opsConnectionLost', false
-
-      if repo = @get 'repository'
-        if repo.get('state') == 'failed'
-          cacheKey = "repo:#{repo.get('id')}:shownError"
-          if !App.localStorage.get(cacheKey)
-            App.set 'flashMessage', { type: 'error', text: "Failed to clone repository: #{repo.get('failure_reason')}" }
-            App.localStorage.set(cacheKey, true)
-  ).observes 'opsSocketReady'
+  socketConnected: (->
+    if @get('socketReady') && (socketTimeoutAlert = @get('socketTimeoutAlert'))
+      Em.run.cancel socketTimeoutAlert
+      @set 'socketConnectionLost', false
+  ).observes 'socketReady'
 
   warnWhenOffline: (->
     if App.get 'offline'
