@@ -5,4 +5,4 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export GIN_MODE=test
 export NITROUS_ENV=test
 
-"$DIR/env" ginkgo -r "$@"
+"$DIR/env" ginkgo -p -r "$@"
