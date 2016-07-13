@@ -81,8 +81,8 @@ App.IdeDocumentView = Em.View.extend
   ).property 'document.path.loadCount'
 
   savingDisabled: (->
-    @get('saving') || App.get('offline') || App.get('router.ideController.opsSocketNotReady')
-  ).property 'saving', 'App.offline', 'App.router.ideController.opsSocketNotReady'
+    @get('saving') || App.get('offline') || App.get('router.ideController.socketNotReady')
+  ).property 'saving', 'App.offline', 'App.router.ideController.socketNotReady'
 
   triggerSelectNext: (->
     if @get('document.selectNextTrigger') && (editor = @get 'editor')
@@ -278,20 +278,20 @@ App.IdeDocumentView = Em.View.extend
   ).observes 'collabMode', 'controller.collabSocketReady'
 
   shouldReloadDocumentDidChange: (->
-    return unless @get('shouldReloadDocument') && @get('controller.opsSocketReady')
+    return unless @get('shouldReloadDocument') && @get('controller.socketReady')
     @set 'shouldReloadDocument', false
     doc = @get 'document'
     return unless fileName = doc.get 'path.absolutePath'
     @leaveCollab()
     controller = @get 'controller'
-    opsSocket = controller.get 'opsSocket'
-    opsSocket.fetchFileContent fileName, (err, absolutePath, contentType, content) =>
+    socket = controller.get 'socket'
+    socket.fetchFileContent fileName, (err, absolutePath, contentType, content) =>
       if err || contentType?.match(/^image/)
         controller.removeTab(doc, true)
         return
       doc.set 'content', content
       @set 'collabMode', true
-  ).observes 'shouldReloadDocument', 'controller.opsSocketReady'
+  ).observes 'shouldReloadDocument', 'controller.socketReady'
 
   modeDidChange: (->
     @updateEditor('mode')

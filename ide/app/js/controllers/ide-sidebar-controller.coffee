@@ -7,9 +7,9 @@ App.IdeSidebarController = Em.ArrayController.extend
   uploadDialog: null
   confirmDeletePathDialog: null
 
-  opsSocketBinding: Em.Binding.oneWay 'App.router.ideController.opsSocket'
-  opsSocketReadyBinding: Em.Binding.oneWay 'opsSocket.started'
-  opsSocketNotReady: Em.computed.not 'opsSocketReady'
+  socketBinding: Em.Binding.oneWay 'App.router.ideController.socket'
+  socketReadyBinding: Em.Binding.oneWay 'socket.started'
+  socketNotReady: Em.computed.not 'socketReady'
 
   activeFilesMonitorBinding: Em.Binding.oneWay 'App.router.ideController.activeFilesMonitor'
 
@@ -35,23 +35,23 @@ App.IdeSidebarController = Em.ArrayController.extend
     @set 'uploadDialog', null
     @set 'currentlyDraggedPath', null
     @set 'currentDroppable', null
-    if socket = @get 'opsSocket'
+    if socket = @get 'socket'
       socket.off 'dirChanged.output'
 
   onDirChanged: (error, absolutePathString) ->
     this.refreshPath absolutePathString
 
-  opsSocketDidStartForTheFirstTime: (->
-    if @get('opsSocket.startedFirstTime') && @get('opsSocketReady')
+  socketDidStartForTheFirstTime: (->
+    if @get('socket.startedFirstTime') && @get('socketReady')
       Em.run.next =>
-        socket = @get 'opsSocket'
+        socket = @get 'socket'
         socket.on 'dirChanged.output', _.bind(@onDirChanged, this)
         this.openPath @get('rootPath')
         unless App.get('userMetadata').readme_opened
           this.openRepoReadme()
 
         @restoreOpenTabs()
-  ).observes 'opsSocket.startedFirstTime', 'opsSocketReady'
+  ).observes 'socket.startedFirstTime', 'socketReady'
 
   restoreOpenTabs: ->
     if openTabs = App.get('userMetadata').openTabs
@@ -123,7 +123,7 @@ App.IdeSidebarController = Em.ArrayController.extend
   #   done: callback (document)
   #   error: callback (errorMessage)
   openPath: (path, settings = {}) ->
-    return if path.get('loading') || !@get('opsSocketReady')
+    return if path.get('loading') || !@get('socketReady')
 
     if settings.error != false && typeof settings.error != 'function'
       settings.error = (err) ->
@@ -170,8 +170,8 @@ App.IdeSidebarController = Em.ArrayController.extend
     "https://#{freighterdUrl}/containers/#{cid}/download?path=#{path}&token=#{token}"
 
   unwatchDir: (path) ->
-    opsSocket = @get 'opsSocket'
-    opsSocket.unwatchDir path.get('absolutePath')
+    socket = @get 'socket'
+    socket.unwatchDir path.get('absolutePath')
 
   reveal: (path) ->
     return unless path.get
@@ -187,9 +187,9 @@ App.IdeSidebarController = Em.ArrayController.extend
     @set 'currentlySelectedPath', origPath
 
   fetchFileList: (path) ->
-    opsSocket = @get 'opsSocket'
+    socket = @get 'socket'
     path.incrementProperty 'loadCount'
-    opsSocket.fetchFileList path.get('absolutePath'), (err, absolutePath, content) ->
+    socket.fetchFileList path.get('absolutePath'), (err, absolutePath, content) ->
       path.decrementProperty 'loadCount'
       if err
         path.set 'expanded', false
@@ -201,11 +201,11 @@ App.IdeSidebarController = Em.ArrayController.extend
   # e.g. because of running gofmt/goimports on the code, and we want those
   # changes be reflected in the editor
   refreshTextFileContent: (path, settings = {}) ->
-    opsSocket = @get 'opsSocket'
+    socket = @get 'socket'
     path.incrementProperty 'loadCount'
     editorController = @get('controllers.ideEditor')
 
-    opsSocket.fetchFileContent path.get('absolutePath'), (err, absolutePath, contentType, content) =>
+    socket.fetchFileContent path.get('absolutePath'), (err, absolutePath, contentType, content) =>
       path.decrementProperty 'loadCount'
       if err
         if settings.error
@@ -219,11 +219,11 @@ App.IdeSidebarController = Em.ArrayController.extend
         settings.done(tab)
 
   fetchFileContent: (path, settings = {}) ->
-    opsSocket = @get 'opsSocket'
+    socket = @get 'socket'
     path.incrementProperty 'loadCount'
     editorController = @get('controllers.ideEditor')
 
-    opsSocket.fetchFileContent path.get('absolutePath'), (err, absolutePath, contentType, content) =>
+    socket.fetchFileContent path.get('absolutePath'), (err, absolutePath, contentType, content) =>
       path.decrementProperty 'loadCount'
       if err
         if err == 'aio:file_is_oversized_image'
@@ -318,7 +318,7 @@ App.IdeSidebarController = Em.ArrayController.extend
   saveNewPath: (path, name) ->
     if parentPath = @findParentPath(path)
       parentAbsolutePath = path.get 'parentAbsolutePath'
-      opsSocket = @get 'opsSocket'
+      socket = @get 'socket'
       absolutePath = _.chain([parentAbsolutePath, name]).compact().join('/').value()
 
       callback = (err) =>
@@ -332,9 +332,9 @@ App.IdeSidebarController = Em.ArrayController.extend
         this.refresh parentPath
 
       if path.get 'directory'
-        opsSocket.makeDirectory absolutePath, callback
+        socket.makeDirectory absolutePath, callback
       else
-        opsSocket.writeNewFile absolutePath, '', callback
+        socket.writeNewFile absolutePath, '', callback
 
     @get('controllers.ideEditor').trackActivity()
 
@@ -365,7 +365,7 @@ App.IdeSidebarController = Em.ArrayController.extend
     parentPath = rootPath.findByRelativePath parentAbsolutePath
     return unless parentPath
 
-    opsSocket = @get 'opsSocket'
+    socket = @get 'socket'
     currentPathName = path.get 'name'
 
     if isDrag
@@ -383,7 +383,7 @@ App.IdeSidebarController = Em.ArrayController.extend
     newAbsolutePath = this._makeAbsolutePath newParentPath, newPathName
 
     path.incrementProperty 'loadCount'
-    opsSocket.rename currentAbsolutePath, newAbsolutePath, (err) =>
+    socket.rename currentAbsolutePath, newAbsolutePath, (err) =>
       if err
         if err == 'aio:name_taken'
           App.set 'flashMessage', { type: 'error', text: "The name “#{newPathName}” is already taken. Please choose a different name." }
@@ -435,12 +435,12 @@ App.IdeSidebarController = Em.ArrayController.extend
   delete: (path) ->
     return if path == @get 'rootPath'
     deleteMethod = if path.get('directory') then 'deleteDir' else 'deleteFile'
-    opsSocket = @get 'opsSocket'
+    socket = @get 'socket'
     parentPath = @findParentPath path
     path.set 'beingDeleted', true
     path.incrementProperty 'loadCount'
 
-    opsSocket[deleteMethod] path.get('absolutePath'), (err) =>
+    socket[deleteMethod] path.get('absolutePath'), (err) =>
       if err
         path.decrementProperty 'loadCount'
         path.set 'beingDeleted', false
