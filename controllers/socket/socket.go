@@ -7,8 +7,28 @@ import (
 )
 
 func Socket(c *gin.Context) {
-	err := ws.Upgrade(c.Writer, c.Request)
-	if err != nil {
+	tok := c.Query("token")
+	if tok == "" {
+		c.JSON(422, gin.H{
+			"error": "invalid_params",
+			"errors": map[string]string{
+				"token": "is required",
+			},
+		})
+		return
+	}
+
+	if ud := controllers.GetUserDataByToken(tok); ud == nil {
+		c.JSON(422, gin.H{
+			"error": "invalid_credentials",
+			"errors": map[string]string{
+				"token": "is invalid",
+			},
+		})
+		return
+	}
+
+	if err := ws.Upgrade(c.Writer, c.Request); err != nil {
 		controllers.InternalServerError(c, err)
 		return
 	}

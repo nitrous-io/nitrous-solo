@@ -7,8 +7,14 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nitrous-io/nitrous-solo/data"
+	"github.com/nitrous-io/nitrous-solo/pkg/token"
 
 	"github.com/Sirupsen/logrus"
+)
+
+const (
+	CurrentUserDataKey = "current_user_data"
 )
 
 func InternalServerError(c *gin.Context, err error) {
@@ -46,4 +52,18 @@ func InternalServerError(c *gin.Context, err error) {
 
 	logrus.WithFields(fields).Error(errMsg)
 	c.JSON(http.StatusInternalServerError, j)
+}
+
+func GetUserDataByToken(tok string) *data.UserData {
+	login := token.ValidateTokenString(tok)
+	if login == "" {
+		return nil
+	}
+
+	ud, ok := data.D.Users[login]
+	if !ok {
+		return nil
+	}
+
+	return ud
 }
