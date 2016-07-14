@@ -225,7 +225,7 @@ var _ = Describe("sh", func() {
 					Run(&ws.Context{
 						Data: []byte(`{
 							"cmd": "does not matter",
-							"dir": "` + tmpDir + `",
+							"wd": "` + tmpDir + `",
 							"run_as": "` + currUser.Username + `"
 						}`),
 						Reply: cb,
@@ -246,7 +246,7 @@ var _ = Describe("sh", func() {
 					Run(&ws.Context{
 						Data: []byte(`{
 							"cmd": "does not matter",
-							"dir": "` + tmpDir + `-non-existent",
+							"wd": "` + tmpDir + `-non-existent",
 							"run_as": "` + currUser.Username + `"
 						}`),
 						Reply: cb,

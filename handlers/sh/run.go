@@ -20,7 +20,7 @@ type Request struct {
 	Env   []string `json:"env"`
 	Args  []string `json:"args"`
 	RunAs string   `json:"run_as"`
-	Dir   string   `json:"dir"`
+	WD    string   `json:"wd"`
 }
 
 func Run(c *ws.Context) {
@@ -48,7 +48,7 @@ func Run(c *ws.Context) {
 	}
 
 	cmd := executor.Command(req.Cmd, req.Args...)
-	cmd.Dir = req.Dir
+	cmd.Dir = req.WD
 	cmd.Env = append(cmd.Env, req.Env...)
 
 	usr, err := user.Lookup(req.RunAs)
