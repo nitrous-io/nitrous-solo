@@ -59,6 +59,18 @@ App.Socket = Em.Object.extend(Em.Evented, {
   },
 
   fetchFileContent: function(path, cb) {
+    const data = JSON.stringify({ path });
+    this.conn.send("fs.read", data, function(msgName, data, done) {
+      let message = null;
+      try {
+        message = JSON.parse(data);
+      } catch(err) {
+        console.log('JSON parse error', err);
+        return;
+      }
+      cb(message.error, message.type, message.content);
+      done();
+    });
   },
 
   unwatchDir: function(path) {
