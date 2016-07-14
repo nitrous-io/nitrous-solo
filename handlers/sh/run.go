@@ -2,6 +2,7 @@ package sh
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -10,18 +11,24 @@ import (
 	"syscall"
 
 	. "github.com/nitrous-io/nitrous-solo/handlers"
+	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 )
 
 var executor Executor = &StdExecutor{}
 
 type Request struct {
 	Cmd   string   `json:"cmd"`
+	Env   []string `json:"env"`
 	Args  []string `json:"args"`
 	RunAs string   `json:"run_as"`
-	Dir   string   `json:"dir"`
+	WD    string   `json:"wd"`
 }
 
-func Run(name string, data []byte, reply func([]byte)) {
+func Run(c *ws.Context) {
+	defer c.Done()
+	data := c.Data
+	reply := c.Reply
+
 	if len(data) == 0 {
 		reply([]byte(""))
 		return
@@ -33,29 +40,39 @@ func Run(name string, data []byte, reply func([]byte)) {
 		return
 	}
 
+	if req.RunAs == "" {
+		var ok bool
+		req.RunAs, ok = c.Meta["user"].(string)
+		if !ok {
+			ReplyUnexpectedError(nil, reply)
+			return
+		}
+	}
+
 	if req.Cmd == "" || req.RunAs == "" {
 		ReplyJSON(H{"error": "invalid_params"}, reply)
 		return
 	}
 
 	cmd := executor.Command(req.Cmd, req.Args...)
-	cmd.Dir = req.Dir
+	cmd.Dir = req.WD
+	cmd.Env = req.Env
 
 	usr, err := user.Lookup(req.RunAs)
 	if err != nil {
-		ReplyJSON(H{"error": "unknown user"}, reply)
+		ReplyJSON(H{"error": "invalid_user"}, reply)
 		return
 	}
 
-	uid, err := strconv.ParseInt(usr.Uid, 10, 32)
+	uid, err := strconv.ParseUint(usr.Uid, 10, 32)
 	if err != nil {
-		ReplyJSON(H{"error": "unknown user"}, reply)
+		ReplyUnexpectedError(err, reply)
 		return
 	}
 
-	gid, err := strconv.ParseInt(usr.Gid, 10, 32)
+	gid, err := strconv.ParseUint(usr.Gid, 10, 32)
 	if err != nil {
-		ReplyJSON(H{"error": "unknown user"}, reply)
+		ReplyUnexpectedError(err, reply)
 		return
 	}
 
@@ -69,9 +86,10 @@ func Run(name string, data []byte, reply func([]byte)) {
 	cmd.Stderr = &stderr
 
 	output, err := cmd.Output()
+
 	res := H{
-		"stdout":    string(output), // Do we need base64-encode stdout/stderr over a WebSocket?
-		"stderr":    stderr.String(),
+		"stdout":    base64.StdEncoding.EncodeToString(output),
+		"stderr":    base64.StdEncoding.EncodeToString(stderr.Bytes()),
 		"exit_code": 0,
 	}
 	if err != nil {
