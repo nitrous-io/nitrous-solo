@@ -205,7 +205,7 @@ App.IdeSidebarController = Em.ArrayController.extend
     path.incrementProperty 'loadCount'
     editorController = @get('controllers.ideEditor')
 
-    socket.fetchFileContent path.get('absolutePath'), (err, absolutePath, contentType, content) =>
+    socket.fetchFileContent path.get('absolutePath'), (err, contentType, content) =>
       path.decrementProperty 'loadCount'
       if err
         if settings.error
@@ -223,10 +223,11 @@ App.IdeSidebarController = Em.ArrayController.extend
     path.incrementProperty 'loadCount'
     editorController = @get('controllers.ideEditor')
 
-    socket.fetchFileContent path.get('absolutePath'), (err, absolutePath, contentType, content) =>
+    socket.fetchFileContent path.get('absolutePath'), (err, contentType, content) =>
       path.decrementProperty 'loadCount'
       if err
         if err == 'aio:file_is_oversized_image'
+          #FIXME
           container = App.get('container')
           container.requestToken(['download']).then (tokenResp) =>
             tab = editorController.createTab(
