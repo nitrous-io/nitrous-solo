@@ -190,7 +190,7 @@ App.IdeSidebarController = Em.ArrayController.extend
   fetchFileList: (path) ->
     socket = @get 'socket'
     path.incrementProperty 'loadCount'
-    socket.fetchFileList path.get('absolutePath'), (err, absolutePath, content) ->
+    socket.fetchFileList path.get('absolutePath'), (err, content) ->
       path.decrementProperty 'loadCount'
       if err
         path.set 'expanded', false
