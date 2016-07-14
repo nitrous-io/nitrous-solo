@@ -285,7 +285,7 @@ App.IdeDocumentView = Em.View.extend
     @leaveCollab()
     controller = @get 'controller'
     socket = controller.get 'socket'
-    socket.fetchFileContent fileName, (err, absolutePath, contentType, content) =>
+    socket.fetchFileContent fileName, (err, contentType, content) =>
       if err || contentType?.match(/^image/)
         controller.removeTab(doc, true)
         return
