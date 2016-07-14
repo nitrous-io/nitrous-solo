@@ -7,7 +7,6 @@ klass = App.Path = Em.ArrayProxy.extend Em.SortableMixin,
   realPath: ''
   loadCount: 0
   directory: false
-  size: 0
   editable: false
   new: false
   beingDeleted: false
@@ -95,12 +94,10 @@ klass = App.Path = Em.ArrayProxy.extend Em.SortableMixin,
     _getAbsolutePathForItem = (name) ->
       _.chain([absolutePath, name]).compact().join('/').value()
 
-    newContent.forEach (item) =>
-      name = item[0]
-      isDir = item[1]
-      size = item[2]
-      realPath = item[3]
-
+    newContentPaths = []
+    newContent.forEach (file) =>
+      isDir = file.slice(-1) == '/'
+      name = if isDir then file.slice(0, -1) else file
       absolutePathForItem = _getAbsolutePathForItem(name)
       if existingContentPaths.contains absolutePathForItem
         path = this.findByRelativePath name
@@ -112,10 +109,9 @@ klass = App.Path = Em.ArrayProxy.extend Em.SortableMixin,
         addedContent.push path
       path.setProperties
         directory: isDir
-        size: size
-        realPath: realPath
+        realPath: if (absolutePathForItem.slice(-1) == '/') then absolutePathForItem.slice(0, -1) else absolutePathForItem
+      newContentPaths.push _getAbsolutePathForItem(name)
 
-    newContentPaths = newContent.map (item) -> _getAbsolutePathForItem(item[0])
     content.forEach (path) ->
       unless newContentPaths.contains path.get('absolutePath')
         removedContent.push path unless path.get 'new'
