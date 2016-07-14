@@ -7,10 +7,12 @@ type M map[string]interface{}
 type MessageHandlerFunc func(c *Context)
 
 type Context struct {
-	Name  string
-	Data  []byte
-	Reply func([]byte)
-	Meta  M
+	Name    string
+	Data    []byte
+	Reply   func([]byte)
+	Meta    M
+	OnClose <-chan struct{}
+	Done    func()
 }
 
 func Upgrade(w http.ResponseWriter, r *http.Request, meta map[string]interface{}) error {
