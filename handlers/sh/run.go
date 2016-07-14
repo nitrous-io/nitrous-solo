@@ -2,6 +2,7 @@ package sh
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -79,8 +80,10 @@ func Run(c *ws.Context) {
 	cmd.Stderr = &stderr
 
 	output, err := cmd.Output()
+	d := base64.StdEncoding.EncodeToString(output)
+
 	res := H{
-		"stdout":    string(output), // Do we need base64-encode stdout/stderr over a WebSocket?
+		"stdout":    d,
 		"stderr":    stderr.String(),
 		"exit_code": 0,
 	}

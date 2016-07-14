@@ -1,6 +1,7 @@
 package sh
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -146,7 +147,10 @@ var _ = Describe("sh", func() {
 
 				Expect(j.ExitCode).To(Equal(0))
 				Expect(j.Stderr).To(Equal(""))
-				Expect(j.Stdout).To(Equal("Running!\n"))
+
+				stdout, err := base64.StdEncoding.DecodeString(j.Stdout)
+				Expect(err).To(BeNil())
+				Expect(stdout).To(Equal([]uint8("Running!\n")))
 			})
 
 			It("runs the command as the given user", func() {
@@ -304,8 +308,11 @@ var _ = Describe("sh", func() {
 					Expect(j.Error).To(Equal(""))
 
 					Expect(j.ExitCode).To(Equal(0))
-					Expect(j.Stdout).To(Equal("BAR QUX !\n"))
 					Expect(j.Stderr).To(Equal(""))
+
+					stdout, err := base64.StdEncoding.DecodeString(j.Stdout)
+					Expect(err).To(BeNil())
+					Expect(stdout).To(Equal([]uint8("BAR QUX !\n")))
 				})
 			})
 		})
