@@ -31,6 +31,11 @@ func resetHub() {
 var _ = Describe("pkg/ws", func() {
 	BeforeEach(func() {
 		resetHub()
+		SetDefaultEventuallyTimeout(10 * time.Second)
+	})
+
+	AfterEach(func() {
+		SetDefaultEventuallyTimeout(1 * time.Second)
 	})
 
 	Describe("registerConn()", func() {

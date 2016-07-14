@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os/user"
 	"testing"
+	"time"
 
 	. "github.com/nitrous-io/nitrous-solo/testhelper"
 	"github.com/nitrous-io/pty"
@@ -41,6 +42,11 @@ var _ = Describe("pkg/shell", func() {
 	BeforeEach(func() {
 		resetHub()
 		res = []byte{}
+		SetDefaultEventuallyTimeout(10 * time.Second)
+	})
+
+	AfterEach(func() {
+		SetDefaultEventuallyTimeout(1 * time.Second)
 	})
 
 	Describe("StartAndAttach", func() {
