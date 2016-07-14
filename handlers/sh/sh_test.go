@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"os/user"
 	"testing"
 
 	"github.com/nitrous-io/nitrous-solo/handlers/sh"
@@ -30,7 +31,11 @@ var (
 )
 
 var _ = Describe("sh", func() {
-	var res []byte
+	var (
+		res      []byte
+		currUser *user.User
+		err      error
+	)
 
 	cb := func(r []byte) {
 		res = r
@@ -59,6 +64,9 @@ var _ = Describe("sh", func() {
 		sh.ShellKill = fake.ShellKill
 		sh.ShellList = fake.ShellList
 		fake.FakeShellReset()
+
+		currUser, err = user.Current()
+		Expect(err).To(BeNil())
 	})
 
 	AfterEach(func() {
@@ -89,18 +97,6 @@ var _ = Describe("sh", func() {
 		Context("when 'cmd' param is missing", func() {
 			It("replies with an error", func() {
 				delete(params, "cmd")
-				sh.Start(&ws.Context{
-					Data:  EncodeJSON(params),
-					Reply: cb,
-				})
-				j := parseResponseJSON()
-				Expect(j["error"]).To(Equal("invalid_params"))
-			})
-		})
-
-		Context("when 'run_as' param is missing", func() {
-			It("replies with an error", func() {
-				delete(params, "run_as")
 				sh.Start(&ws.Context{
 					Data:  EncodeJSON(params),
 					Reply: cb,
@@ -168,6 +164,37 @@ var _ = Describe("sh", func() {
 					Expect(call.Arguments[2]).To(Equal(params["env"]))
 					Expect(call.Arguments[3]).To(Equal(params["wd"]))
 					Expect(call.Arguments[4]).To(Equal(params["run_as"]))
+					Expect(call.Arguments[5]).To(Equal(uint(80)))
+					Expect(call.Arguments[6]).To(Equal(uint(25)))
+					ExpectSameFunc(call.Arguments[7], cb)
+
+					j := parseResponseJSON()
+					Expect(j["subscription_id"]).To(Equal(call.ReturnValues[0]))
+					Expect(j["shell_session_id"]).To(Equal(call.ReturnValues[1]))
+				})
+			})
+
+			Context("when 'run_as' param is missing", func() {
+				It("it runs as current user", func() {
+					delete(params, "run_as")
+					sh.Start(&ws.Context{
+						Data:  EncodeJSON(params),
+						Reply: cb,
+						Meta: map[string]interface{}{
+							"login": "foo",
+							"user":  currUser.Username,
+						},
+					})
+
+					Expect(fake.ShellStartAndAttachCalls.Count()).To(Equal(1))
+					call := fake.ShellStartAndAttachCalls.NthCall(1)
+
+					Expect(call).NotTo(BeNil())
+					Expect(call.Arguments[0]).To(Equal(params["cmd"]))
+					Expect(call.Arguments[1]).To(Equal(params["args"]))
+					Expect(call.Arguments[2]).To(Equal(params["env"]))
+					Expect(call.Arguments[3]).To(Equal(params["wd"]))
+					Expect(call.Arguments[4]).To(Equal(currUser.Username))
 					Expect(call.Arguments[5]).To(Equal(uint(80)))
 					Expect(call.Arguments[6]).To(Equal(uint(25)))
 					ExpectSameFunc(call.Arguments[7], cb)
