@@ -65,6 +65,8 @@ func (h *hubType) run() {
 				data := m.data
 				connID := m.connID
 				msgID := m.msgID
+				onClose := make(chan struct{}, 1)
+				conn.onCloseChans[onClose] = struct{}{}
 
 				go handler(&Context{
 					Name: name,
@@ -72,7 +74,17 @@ func (h *hubType) run() {
 					Reply: func(replyData []byte) {
 						Send(connID, msgID, name, replyData)
 					},
-					Meta: conn.meta,
+					Meta:    conn.meta,
+					OnClose: onClose,
+					Done: func() {
+						h.lock.Lock()
+						defer h.lock.Unlock()
+						_, ok := conn.onCloseChans[onClose]
+						if ok {
+							delete(conn.onCloseChans, onClose)
+							close(onClose)
+						}
+					},
 				})
 			}
 

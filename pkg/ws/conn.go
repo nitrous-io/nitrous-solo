@@ -19,18 +19,20 @@ const (
 var upgrader = websocket.Upgrader{}
 
 type conn struct {
-	ws   *websocket.Conn
-	send chan []byte
-	id   string
-	meta map[string]interface{}
+	ws           *websocket.Conn
+	send         chan []byte
+	id           string
+	meta         map[string]interface{}
+	onCloseChans map[chan struct{}]struct{}
 }
 
 func newConn(ws *websocket.Conn) *conn {
 	return &conn{
-		send: make(chan []byte, 256),
-		ws:   ws,
-		id:   uuid.NewV4().String(),
-		meta: map[string]interface{}{},
+		send:         make(chan []byte, 256),
+		ws:           ws,
+		id:           uuid.NewV4().String(),
+		meta:         M{},
+		onCloseChans: map[chan struct{}]struct{}{},
 	}
 }
 
@@ -58,6 +60,14 @@ func (c *conn) readPump() {
 		if msgType == websocket.TextMessage {
 			parseAndHandleMessage(c, rawMsg)
 		}
+	}
+
+	hub.lock.Lock()
+	defer hub.lock.Unlock()
+	for ch, _ := range c.onCloseChans {
+		ch <- struct{}{}
+		delete(c.onCloseChans, ch)
+		close(ch)
 	}
 }
 

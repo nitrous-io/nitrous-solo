@@ -164,27 +164,52 @@ var _ = Describe("pkg/ws", func() {
 			}
 
 			conn1 = newConn(nil)
+			conn1.meta = M{
+				"meta":  "data",
+				"hello": 123,
+			}
 			conn2 = newConn(nil)
 
 			hub.registerConn(conn1)
 			hub.registerConn(conn2)
 			RegisterHandler("foo", fooHandler)
 			RegisterHandler("bar", barHandler)
-
-			parseAndHandleMessage(conn1, []byte("m|foo|123|foobar777"))
 		})
 
 		It("calls a handler for the message name", func() {
+			parseAndHandleMessage(conn1, []byte("m|foo|123|foobar777"))
 			Eventually(func() Any {
 				return fooHandlerCallContext
 			}).ShouldNot(BeNil())
 			Expect(fooHandlerCallContext.Name).To(Equal("foo"))
 			Expect(fooHandlerCallContext.Data).To(Equal([]byte("foobar777")))
 			Expect(fooHandlerCallContext.Reply).NotTo(BeNil())
+			Expect(fooHandlerCallContext.Meta).To(Equal(M{
+				"meta":  "data",
+				"hello": 123,
+			}))
+			Expect(fooHandlerCallContext.OnClose).NotTo(BeNil())
+			Expect(fooHandlerCallContext.Done).NotTo(BeNil())
+
 			Expect(barHandlerCallContext).To(BeNil())
+
+			parseAndHandleMessage(conn1, []byte("m|bar|245|lol"))
+			Eventually(func() Any {
+				return barHandlerCallContext
+			}).ShouldNot(BeNil())
+			Expect(barHandlerCallContext.Name).To(Equal("bar"))
+			Expect(barHandlerCallContext.Data).To(Equal([]byte("lol")))
+			Expect(barHandlerCallContext.Reply).NotTo(BeNil())
+			Expect(barHandlerCallContext.Meta).To(Equal(M{
+				"meta":  "data",
+				"hello": 123,
+			}))
+			Expect(barHandlerCallContext.OnClose).NotTo(BeNil())
+			Expect(barHandlerCallContext.Done).NotTo(BeNil())
 		})
 
 		It("passes a reply func to handler, which when called, sends a reply back to conn", func() {
+			parseAndHandleMessage(conn1, []byte("m|foo|123|foobar777"))
 			Eventually(func() Any {
 				return fooHandlerCallContext
 			}).ShouldNot(BeNil())
@@ -202,6 +227,58 @@ var _ = Describe("pkg/ws", func() {
 			time.Sleep(5 * time.Millisecond) // give conn2 more time to receive something
 			Expect(conn2.send).To(HaveLen(0))
 			Expect(<-conn1.send).To(Equal([]byte("m|foo|123|bazqux2016")))
+		})
+
+		It("passes an read-only onClose channel that gets called when connection is closed", func() {
+			parseAndHandleMessage(conn1, []byte("m|foo|123|foobar777"))
+			parseAndHandleMessage(conn1, []byte("m|bar|123|foobar777"))
+
+			Eventually(func() Any {
+				return fooHandlerCallContext
+			}).ShouldNot(BeNil())
+			Expect(fooHandlerCallContext.OnClose).NotTo(BeNil())
+
+			Eventually(func() Any {
+				return barHandlerCallContext
+			}).ShouldNot(BeNil())
+			Expect(barHandlerCallContext.OnClose).NotTo(BeNil())
+
+			Expect(conn1.onCloseChans).To(HaveLen(2))
+			for ch, _ := range conn1.onCloseChans {
+				ch <- struct{}{}
+			}
+			Eventually(fooHandlerCallContext.OnClose).Should(Receive())
+			Eventually(barHandlerCallContext.OnClose).Should(Receive())
+		})
+
+		It("passes a Done callback that lets you close and remove the onClose channel", func() {
+			parseAndHandleMessage(conn1, []byte("m|foo|123|foobar777"))
+			parseAndHandleMessage(conn1, []byte("m|bar|123|foobar777"))
+
+			Eventually(func() Any {
+				return fooHandlerCallContext
+			}).ShouldNot(BeNil())
+			Expect(fooHandlerCallContext.OnClose).NotTo(BeNil())
+			Expect(fooHandlerCallContext.Done).NotTo(BeNil())
+
+			Eventually(func() Any {
+				return barHandlerCallContext
+			}).ShouldNot(BeNil())
+			Expect(barHandlerCallContext.OnClose).NotTo(BeNil())
+			Expect(barHandlerCallContext.Done).NotTo(BeNil())
+
+			Expect(conn1.onCloseChans).To(HaveLen(2))
+
+			// call Done
+			barHandlerCallContext.Done()
+
+			Expect(conn1.onCloseChans).To(HaveLen(1))
+
+			for ch, _ := range conn1.onCloseChans {
+				ch <- struct{}{}
+			}
+			Eventually(fooHandlerCallContext.OnClose).Should(Receive())
+			Eventually(barHandlerCallContext.OnClose).Should(BeClosed())
 		})
 	})
 })
