@@ -10,18 +10,23 @@ import (
 	"syscall"
 
 	. "github.com/nitrous-io/nitrous-solo/handlers"
+	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 )
 
 var executor Executor = &StdExecutor{}
 
 type Request struct {
 	Cmd   string   `json:"cmd"`
+	Env   []string `json:"env"`
 	Args  []string `json:"args"`
 	RunAs string   `json:"run_as"`
 	Dir   string   `json:"dir"`
 }
 
-func Run(name string, data []byte, reply func([]byte)) {
+func Run(c *ws.Context) {
+	data := c.Data
+	reply := c.Reply
+
 	if len(data) == 0 {
 		reply([]byte(""))
 		return
@@ -33,6 +38,10 @@ func Run(name string, data []byte, reply func([]byte)) {
 		return
 	}
 
+	if req.RunAs == "" {
+		req.RunAs, _ = c.Meta["user"].(string)
+	}
+
 	if req.Cmd == "" || req.RunAs == "" {
 		ReplyJSON(H{"error": "invalid_params"}, reply)
 		return
@@ -40,6 +49,7 @@ func Run(name string, data []byte, reply func([]byte)) {
 
 	cmd := executor.Command(req.Cmd, req.Args...)
 	cmd.Dir = req.Dir
+	cmd.Env = append(cmd.Env, req.Env...)
 
 	usr, err := user.Lookup(req.RunAs)
 	if err != nil {
