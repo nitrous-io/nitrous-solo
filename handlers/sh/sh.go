@@ -44,6 +44,10 @@ func Start(c *ws.Context) {
 		return
 	}
 
+	if j.RunAs == "" {
+		j.RunAs, _ = c.Meta["user"].(string)
+	}
+
 	if j.Cmd == "" || j.RunAs == "" {
 		ReplyJSON(H{"error": "invalid_params"}, reply)
 		return
