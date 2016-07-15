@@ -123,6 +123,10 @@ func Watch(c *ws.Context) {
 
 				if event.Op&fsnotify.Remove > 0 {
 					ReplyJSON(H{"evt": "removed", "path": event.Name, "id": w.id}, reply)
+					if event.Name == watchPath {
+						stop()
+						return
+					}
 				}
 
 				if event.Op&fsnotify.Rename > 0 {
