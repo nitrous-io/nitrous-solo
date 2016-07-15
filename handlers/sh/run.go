@@ -80,11 +80,10 @@ func Run(c *ws.Context) {
 	cmd.Stderr = &stderr
 
 	output, err := cmd.Output()
-	d := base64.StdEncoding.EncodeToString(output)
 
 	res := H{
-		"stdout":    d,
-		"stderr":    stderr.String(),
+		"stdout":    base64.StdEncoding.EncodeToString(output),
+		"stderr":    base64.StdEncoding.EncodeToString(stderr.Bytes()),
 		"exit_code": 0,
 	}
 	if err != nil {

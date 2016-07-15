@@ -430,7 +430,9 @@ var _ = Describe("sh", func() {
 				err := json.Unmarshal(res, &j)
 				Expect(err).To(BeNil())
 
-				Expect(j.Stderr).To(Equal("some error text\n"))
+				stderr, err := base64.StdEncoding.DecodeString(j.Stderr)
+				Expect(err).To(BeNil())
+				Expect(stderr).To(Equal([]uint8("some error text\n")))
 			})
 		})
 	})
