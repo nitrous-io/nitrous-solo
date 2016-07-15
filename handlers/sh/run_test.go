@@ -3,14 +3,11 @@ package sh
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/user"
 	"strconv"
-	"strings"
-	"testing"
 
 	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 	. "github.com/onsi/ginkgo"
@@ -23,71 +20,9 @@ type TestExecutor struct {
 	LastCmd *exec.Cmd
 }
 
-// Command returns an *exec.Cmd that runs the test executable from "go test",
-// with the single TestHelperProcess test. The actual command and args are
-// passed to the test executable (and can be inspected in the TestHelperProcess
-// test).
 func (e *TestExecutor) Command(name string, arg ...string) *exec.Cmd {
-	testBinArgs := []string{"-test.run=TestHelperProcess", "--"}
-	testBinArgs = append(testBinArgs, name)
-	testBinArgs = append(testBinArgs, arg...)
-	cmd := exec.Command(os.Args[0], testBinArgs...)
-	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
-
-	e.LastCmd = cmd
-
-	return cmd
-}
-
-// TestHelperProcess isn't a real test. It's used to mock exec.Command so that
-// we don't actually run commands in tests.
-func TestHelperProcess(*testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
-		return
-	}
-	defer os.Exit(0)
-
-	// We only want args after the 1st occurrence of "--".
-	args := os.Args
-	for len(args) > 0 {
-		if args[0] == "--" {
-			args = args[1:]
-			break
-		}
-		args = args[1:]
-	}
-	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "No command given\n")
-		os.Exit(2)
-	}
-
-	cmd, args := args[0], args[1:]
-	switch cmd {
-	case "echo":
-		iargs := []interface{}{}
-		for _, s := range args {
-			if strings.HasPrefix(s, "$") {
-				if e := os.Getenv(s[1:]); e != "" {
-					iargs = append(iargs, e)
-				}
-			} else {
-				iargs = append(iargs, s)
-			}
-		}
-		fmt.Println(iargs...)
-	case "exit":
-		n, _ := strconv.Atoi(args[0])
-		os.Exit(n)
-	case "stderrfail":
-		iargs := []interface{}{}
-		for _, s := range args {
-			iargs = append(iargs, s)
-		}
-		fmt.Fprintln(os.Stderr, iargs...)
-		os.Exit(1)
-	case "ls":
-		fmt.Println("Not implemented yet.")
-	}
+	e.LastCmd = exec.Command(name, arg...)
+	return e.LastCmd
 }
 
 var _ = Describe("sh", func() {
@@ -249,7 +184,7 @@ var _ = Describe("sh", func() {
 				It("returns an error when working directory does not exist", func() {
 					Run(&ws.Context{
 						Data: []byte(`{
-							"cmd": "does not matter",
+							"cmd": "ls",
 							"wd": "` + tmpDir + `-non-existent",
 							"run_as": "` + currUser.Username + `"
 						}`),
@@ -284,8 +219,8 @@ var _ = Describe("sh", func() {
 				It("runs the command with given env", func() {
 					Run(&ws.Context{
 						Data: []byte(`{
-							"cmd": "echo",
-							"args": ["$FOO", "$BAZ", "!"],
+							"cmd": "/bin/bash",
+							"args": ["-c", "echo $FOO $BAZ !"],
 							"env": ["FOO=BAR","BAZ=QUX"],
 							"run_as": "` + currUser.Username + `"
 						}`),
@@ -387,8 +322,8 @@ var _ = Describe("sh", func() {
 			It("returns the exit code", func() {
 				Run(&ws.Context{
 					Data: []byte(`{
-						"cmd": "exit",
-						"args": ["42"],
+						"cmd": "/bin/bash",
+						"args": ["-c", "exit 42"],
 						"run_as": "` + currUser.Username + `"
 					}`),
 					Reply: cb,
@@ -412,8 +347,8 @@ var _ = Describe("sh", func() {
 			It("returns the stderr", func() {
 				Run(&ws.Context{
 					Data: []byte(`{
-						"cmd": "stderrfail",
-						"args": ["some", "error", "text"],
+						"cmd": "/bin/bash",
+						"args": ["-c", "echo -n 'some error text' > /dev/stderr"],
 						"run_as": "` + currUser.Username + `"
 					}`),
 					Reply: cb,
@@ -432,7 +367,7 @@ var _ = Describe("sh", func() {
 
 				stderr, err := base64.StdEncoding.DecodeString(j.Stderr)
 				Expect(err).To(BeNil())
-				Expect(stderr).To(Equal([]uint8("some error text\n")))
+				Expect(stderr).To(Equal([]uint8("some error text")))
 			})
 		})
 	})
