@@ -33,6 +33,7 @@ var _ = Describe("fs.Read", func() {
 			fs.Read(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "code.rb")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -46,6 +47,7 @@ var _ = Describe("fs.Read", func() {
 			fs.Read(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "Gemfile")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -59,6 +61,7 @@ var _ = Describe("fs.Read", func() {
 			fs.Read(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "foo")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -72,6 +75,7 @@ var _ = Describe("fs.Read", func() {
 			fs.Read(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "tiny.gif")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -85,6 +89,7 @@ var _ = Describe("fs.Read", func() {
 			fs.Read(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "baz")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -98,6 +103,7 @@ var _ = Describe("fs.Read", func() {
 			fs.Read(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "binaryfile")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -110,6 +116,7 @@ var _ = Describe("fs.Read", func() {
 			fs.Read(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "filesymlink")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -123,6 +130,7 @@ var _ = Describe("fs.Read", func() {
 			fs.Read(&ws.Context{
 				Data:  EncodeJSON(H{"path": ""}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -135,6 +143,7 @@ var _ = Describe("fs.Read", func() {
 			fs.Read(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "code.java")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -147,6 +156,7 @@ var _ = Describe("fs.Read", func() {
 			fs.Read(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "bar")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -159,6 +169,7 @@ var _ = Describe("fs.Read", func() {
 			fs.Read(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "dirsymlink")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -171,6 +182,7 @@ var _ = Describe("fs.Read", func() {
 			fs.Read(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "brokensymlink")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -183,6 +195,7 @@ var _ = Describe("fs.Read", func() {
 			fs.Read(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "recursymlink1")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -200,6 +213,7 @@ var _ = Describe("fs.Read", func() {
 			fs.Read(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "code.rb")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()

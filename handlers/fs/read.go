@@ -17,6 +17,7 @@ import (
 var FileSizeLimit int64 = 50 * 1024 * 1024
 
 func Read(c *ws.Context) {
+	defer c.Done()
 	data := c.Data
 	reply := c.Reply
 

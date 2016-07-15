@@ -33,6 +33,7 @@ var _ = Describe("fs.List", func() {
 			fs.List(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -61,6 +62,7 @@ var _ = Describe("fs.List", func() {
 			fs.List(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "dirsymlink")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -77,6 +79,7 @@ var _ = Describe("fs.List", func() {
 			fs.List(&ws.Context{
 				Data:  EncodeJSON(H{"path": ""}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -89,6 +92,7 @@ var _ = Describe("fs.List", func() {
 			fs.List(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "ffs")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -101,6 +105,7 @@ var _ = Describe("fs.List", func() {
 			fs.List(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "foo")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -113,6 +118,7 @@ var _ = Describe("fs.List", func() {
 			fs.List(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "filesymlink")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -125,6 +131,7 @@ var _ = Describe("fs.List", func() {
 			fs.List(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "brokensymlink")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()
@@ -137,6 +144,7 @@ var _ = Describe("fs.List", func() {
 			fs.List(&ws.Context{
 				Data:  EncodeJSON(H{"path": filepath.Join(fixturesPath, "fs", "recursymlink1")}),
 				Reply: cb,
+				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
 			j := parseResponseJSON()

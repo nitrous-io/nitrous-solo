@@ -12,6 +12,8 @@ type H map[string]interface{}
 type A []interface{}
 type Any interface{}
 
+func Noop() {}
+
 func EncodeJSON(h interface{}) []byte {
 	j, err := json.Marshal(h)
 	Expect(err).To(BeNil())

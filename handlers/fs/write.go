@@ -17,6 +17,7 @@ import (
 )
 
 func Write(c *ws.Context) {
+	defer c.Done()
 	data := c.Data
 	reply := c.Reply
 
