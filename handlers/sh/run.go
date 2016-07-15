@@ -54,19 +54,19 @@ func Run(c *ws.Context) {
 
 	usr, err := user.Lookup(req.RunAs)
 	if err != nil {
-		ReplyJSON(H{"error": "unknown user"}, reply)
+		ReplyJSON(H{"error": "invalid_user"}, reply)
 		return
 	}
 
 	uid, err := strconv.ParseInt(usr.Uid, 10, 32)
 	if err != nil {
-		ReplyJSON(H{"error": "unknown user"}, reply)
+		ReplyUnexpectedError(err, reply)
 		return
 	}
 
 	gid, err := strconv.ParseInt(usr.Gid, 10, 32)
 	if err != nil {
-		ReplyJSON(H{"error": "unknown user"}, reply)
+		ReplyUnexpectedError(err, reply)
 		return
 	}
 

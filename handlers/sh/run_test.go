@@ -314,7 +314,7 @@ var _ = Describe("sh", func() {
 				var j map[string]interface{}
 				err := json.Unmarshal(res, &j)
 				Expect(err).To(BeNil())
-				Expect(j["error"]).To(Equal("unknown user"))
+				Expect(j["error"]).To(Equal("invalid_user"))
 			})
 		})
 
