@@ -205,8 +205,8 @@ var _ = Describe("fs", func() {
 				// Rename a file - this will trigger a rename and a create event, in
 				// any order.
 				err = os.Rename(
-					filepath.Join(testDir, "script", "server"),
-					filepath.Join(testDir, "script", "server-old"),
+					filepath.Join(testDir, "CHANGELOG.md"),
+					filepath.Join(testDir, "DELETELOG.md"),
 				)
 				Expect(err).To(BeNil())
 
@@ -225,63 +225,22 @@ var _ = Describe("fs", func() {
 					map[string]interface{}{
 						"id":   watchID,
 						"evt":  "renamed",
-						"path": filepath.Join(testDir, "script", "server"),
+						"path": filepath.Join(testDir, "CHANGELOG.md"),
 					},
 					map[string]interface{}{
 						"id":   watchID,
 						"evt":  "created",
-						"path": filepath.Join(testDir, "script", "server-old"),
+						"path": filepath.Join(testDir, "DELETELOG.md"),
 					},
 				))
-			})
 
-			It("watches any newly created subdirectories for changes", func() {
-				Watch(&ws.Context{
-					Data:    []byte(`{"path": "` + testDir + `"}`),
-					Reply:   cb,
-					OnClose: onClose,
-					Done:    Noop,
-				})
-
-				res := rc.next()
-				Expect(res).NotTo(BeEmpty())
-
-				j := parseResponseJSON(res)
-				Expect(j["evt"]).To(Equal("started"))
-				watchID, ok := j["id"].(string)
-				Expect(ok).To(BeTrue())
-				Expect(watchID).NotTo(Equal(""))
-
-				// Create subdirectory 2 levels deep.
-				err := os.MkdirAll(filepath.Join(testDir, "spec", "helpers"), 0755)
-				Expect(err).To(BeNil())
-
-				Eventually(func() Any {
-					res = rc.next()
-					return res
-				}).ShouldNot(BeEmpty())
-
-				j = parseResponseJSON(res)
-				Expect(j["id"]).To(Equal(watchID))
-				Expect(j["path"]).To(Equal(filepath.Join(testDir, "spec")))
-				Expect(j["evt"]).To(Equal("created"))
-
-				// The spec/helpers directory does not trigger an event.
-
-				// Make changes in the spec/helpers directory.
-				f, err := os.Create(filepath.Join(testDir, "spec", "helpers", "app_helper.rb"))
+				// Anything happening within a subdirectory should not trigger an event.
+				f, err = os.Create(filepath.Join(testDir, "script", "test"))
 				Expect(err).To(BeNil())
 				f.Close()
 
-				Eventually(func() Any {
-					res = rc.next()
-					return res
-				}).ShouldNot(BeEmpty())
-
-				j = parseResponseJSON(res)
-				Expect(j["id"]).To(Equal(watchID))
-				Expect(j["path"]).To(Equal(filepath.Join(testDir, "spec", "helpers", "app_helper.rb")))
-				Expect(j["evt"]).To(Equal("created"))
+				time.Sleep(10 * time.Millisecond) // wait a little to give fsnotify a chance to detect changes
+				Expect(rc.next()).To(BeEmpty())
 			})
 		})
 
@@ -500,112 +459,6 @@ var _ = Describe("fs", func() {
 				// There should only be a single "unwatched" event, and no "stopped"
 				// event (since the previous unwatch already stopped it).
 				Expect(rc.next()).To(BeEmpty())
-			})
-		})
-	})
-
-	Describe("dirtree()", func() {
-		var testDir string
-
-		setupTestFiles := func(dir string, files []string) {
-			for _, p := range files {
-				path := filepath.Join(testDir, p)
-				dir := filepath.Dir(path)
-				err := os.MkdirAll(dir, 0755)
-				Expect(err).To(BeNil())
-				f, err := os.Create(path)
-				Expect(err).To(BeNil())
-				f.Close()
-			}
-		}
-
-		BeforeEach(func() {
-			var err error
-			testDir, err = ioutil.TempDir("/tmp", "subdirectories-test")
-			Expect(err).To(BeNil())
-		})
-
-		AfterEach(func() {
-			os.RemoveAll(testDir)
-		})
-
-		It("returns a tree of all directories in a given directory, including the directory itself", func() {
-			files := []string{
-				"README.md",
-				"controllers/ping/ping.go",
-				"controllers/ping/ping_test.go",
-				"testhelper/fixtures/fs/file.txt",
-				".git/HEAD",
-				".git/refs/remotes/origin/HEAD",
-				".git/refs/remotes/origin/release",
-			}
-			setupTestFiles(testDir, files)
-
-			dirs, err := dirtree(testDir)
-			Expect(err).To(BeNil())
-
-			Expect(dirs).To(ConsistOf(
-				testDir,
-				testDir+"/controllers",
-				testDir+"/controllers/ping",
-				testDir+"/testhelper",
-				testDir+"/testhelper/fixtures",
-				testDir+"/testhelper/fixtures/fs",
-				testDir+"/.git",
-				testDir+"/.git/refs",
-				testDir+"/.git/refs/remotes",
-				testDir+"/.git/refs/remotes/origin",
-			))
-		})
-
-		It("does not resolve subdirectories that are actually symlinks", func() {
-			files := []string{
-				"README.md",
-				"controllers/ping/ping.go",
-			}
-			setupTestFiles(testDir, files)
-
-			testDir2, err := ioutil.TempDir("/tmp", "subdirectories-test-2")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(testDir2)
-
-			err = os.Symlink(testDir2, testDir+"/symlinkdir")
-			Expect(err).To(BeNil())
-
-			dirs, err := dirtree(testDir)
-			Expect(err).To(BeNil())
-
-			Expect(dirs).To(ConsistOf(
-				testDir,
-				testDir+"/controllers",
-				testDir+"/controllers/ping",
-			))
-		})
-
-		Context("when given directory is a symlink", func() {
-			It("it resolves symlink to the source directory", func() {
-				files := []string{
-					"README.md",
-					"controllers/ping/ping.go",
-				}
-				setupTestFiles(testDir, files)
-
-				testDir2, err := ioutil.TempDir("/tmp", "subdirectories-test-2")
-				Expect(err).To(BeNil())
-				defer os.RemoveAll(testDir2)
-
-				symlinkDir := testDir2 + "/symlinkdir"
-				err = os.Symlink(testDir, symlinkDir)
-				Expect(err).To(BeNil())
-
-				dirs, err := dirtree(symlinkDir)
-				Expect(err).To(BeNil())
-
-				Expect(dirs).To(ConsistOf(
-					testDir,
-					testDir+"/controllers",
-					testDir+"/controllers/ping",
-				))
 			})
 		})
 	})

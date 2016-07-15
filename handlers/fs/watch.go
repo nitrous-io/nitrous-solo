@@ -90,17 +90,15 @@ func Watch(c *ws.Context) {
 	// Return a UUID so that clients can stop watching cleanly.
 	ReplyJSON(H{"evt": "started", "id": w.id}, reply)
 
-	// Add all directories in the tree to watcher (fsnotify does not recursively
-	// watch subdirectories).
-	subdirs, err := dirtree(j.Path)
+	watchPath, err := filepath.EvalSymlinks(j.Path)
 	if err != nil {
-		logrus.Errorf("failed to determine subdirectories of %q, err: %v", j.Path, err)
-		ReplyJSON(H{"error": ""}, reply)
+		ReplyUnexpectedError(err, reply)
 		return
 	}
 
-	for _, d := range subdirs {
-		watcher.Add(d)
+	if err := watcher.Add(watchPath); err != nil {
+		ReplyUnexpectedError(err, reply)
+		return
 	}
 
 	noDoneAfterReturn = true
@@ -117,34 +115,6 @@ func Watch(c *ws.Context) {
 			case event := <-watcher.Events:
 				if event.Op&fsnotify.Create > 0 {
 					ReplyJSON(H{"evt": "created", "path": event.Name, "id": w.id}, reply)
-
-					fi, err := os.Stat(event.Name)
-					if err != nil {
-						logrus.Errorf("failed to stat created file %q, err: %v", event.Name, err)
-						// Disregard error - maybe we don't have permissions to stat it.
-						continue
-					}
-
-					if !fi.IsDir() {
-						continue
-					}
-
-					// If file created is a dir, we start watching it _and_ its
-					// subdirectories for changes too.
-					// This is necessary because e.g. `mkdir -p /path/to/subdir/deep/dir`.
-					dir := event.Name
-					logrus.Debugf("created dir, watching it too: %q", dir)
-
-					subdirs, err := dirtree(dir)
-					if err != nil {
-						logrus.Errorf("failed to determine subdirectories of %q, err: %v", dir, err)
-						// Disregard error.
-						continue
-					}
-
-					for _, d := range subdirs {
-						watcher.Add(d)
-					}
 				}
 
 				if event.Op&fsnotify.Write > 0 {
@@ -208,37 +178,4 @@ func Unwatch(c *ws.Context) {
 	w.stopOnce.Do(func() {
 		w.stop <- struct{}{}
 	})
-}
-
-func dirtree(dir string) ([]string, error) {
-	// If given a symlink to a dir, resolve it to its real path because
-	// filepath.Walk does not handle symlinks.
-	realDir, err := filepath.EvalSymlinks(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	var subdirs []string
-
-	walkFn := func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			logrus.Warnf("error walking %q, err: %v", path, err)
-			return nil // Don't return an error so that we continue walking elsewhere.
-		}
-
-		mode := info.Mode()
-		if !mode.IsDir() {
-			return nil
-		}
-
-		subdirs = append(subdirs, path)
-
-		return nil
-	}
-
-	if err := filepath.Walk(realDir, walkFn); err != nil {
-		return nil, err
-	}
-
-	return subdirs, nil
 }
