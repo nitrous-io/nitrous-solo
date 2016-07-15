@@ -9,6 +9,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/fsnotify/fsnotify"
 	. "github.com/nitrous-io/nitrous-solo/handlers"
+	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 	"github.com/satori/go.uuid"
 )
 
@@ -26,7 +27,10 @@ type watch struct {
 	stopped chan struct{}
 }
 
-func Watch(name string, data []byte, reply func([]byte)) {
+func Watch(c *ws.Context) {
+	data := c.Data
+	reply := c.Reply
+
 	if len(data) == 0 {
 		reply([]byte(""))
 		return
@@ -35,6 +39,7 @@ func Watch(name string, data []byte, reply func([]byte)) {
 	var j struct {
 		Path string `json:"path"`
 	}
+
 	if err := json.Unmarshal(data, &j); err != nil {
 		ReplyJSON(H{"error": "invalid_json"}, reply)
 		return
@@ -55,6 +60,7 @@ func Watch(name string, data []byte, reply func([]byte)) {
 		return
 	}
 
+	// TODO: Should we check if the user has permission to read directory?
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		logrus.Warnf("failed to start fsnotify watcher, err: %v", err)
@@ -75,6 +81,7 @@ func Watch(name string, data []byte, reply func([]byte)) {
 		ReplyJSON(H{"error": ""}, reply)
 		return
 	}
+
 	for _, d := range subdirs {
 		watcher.Add(d)
 	}
@@ -143,7 +150,10 @@ func Watch(name string, data []byte, reply func([]byte)) {
 	}()
 }
 
-func Unwatch(name string, data []byte, reply func([]byte)) {
+func Unwatch(c *ws.Context) {
+	data := c.Data
+	reply := c.Reply
+
 	if len(data) == 0 {
 		reply([]byte(""))
 		return
