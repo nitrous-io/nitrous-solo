@@ -16,18 +16,36 @@ import (
 var (
 	// watches is a map of "watch UUID" -> "watch struct", so that we can stop
 	// a watcher in a different WS handler.
-	// We could make some optimizations in future, like re-using a watcher if the
-	// same path is requested more than once.
-	watches = make(map[string]*watch)
+	watches     = make(map[string]*watch)
+	watchesLock sync.Mutex // map operations aren't thread safe
 )
 
 type watch struct {
-	id      string
-	stop    chan struct{}
-	stopped chan struct{}
+	id       string
+	stop     chan struct{}
+	stopOnce *sync.Once
+}
+
+func newWatch() *watch {
+	w := &watch{
+		id:       uuid.NewV4().String(),
+		stop:     make(chan struct{}, 1),
+		stopOnce: &sync.Once{},
+	}
+
+	watchesLock.Lock()
+	defer watchesLock.Unlock()
+	watches[w.id] = w
+	return w
 }
 
 func Watch(c *ws.Context) {
+	noDoneAfterReturn := false
+	defer func() {
+		if !noDoneAfterReturn {
+			c.Done()
+		}
+	}()
 	data := c.Data
 	reply := c.Reply
 
@@ -60,7 +78,6 @@ func Watch(c *ws.Context) {
 		return
 	}
 
-	// TODO: Should we check if the user has permission to read directory?
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		logrus.Warnf("failed to start fsnotify watcher, err: %v", err)
@@ -86,12 +103,19 @@ func Watch(c *ws.Context) {
 		watcher.Add(d)
 	}
 
+	noDoneAfterReturn = true
+
+	stop := func() {
+		ReplyJSON(H{"evt": "stopped", "id": w.id}, reply)
+		c.Done()
+	}
+
 	go func() {
 		defer watcher.Close()
 		for {
 			select {
 			case event := <-watcher.Events:
-				if event.Op&fsnotify.Create == fsnotify.Create {
+				if event.Op&fsnotify.Create > 0 {
 					ReplyJSON(H{"evt": "created", "path": event.Name, "id": w.id}, reply)
 
 					fi, err := os.Stat(event.Name)
@@ -123,27 +147,31 @@ func Watch(c *ws.Context) {
 					}
 				}
 
-				if event.Op&fsnotify.Write == fsnotify.Write {
+				if event.Op&fsnotify.Write > 0 {
 					ReplyJSON(H{"evt": "modified", "path": event.Name, "id": w.id}, reply)
 				}
 
-				if event.Op&fsnotify.Remove == fsnotify.Remove {
+				if event.Op&fsnotify.Remove > 0 {
 					ReplyJSON(H{"evt": "removed", "path": event.Name, "id": w.id}, reply)
 				}
 
-				if event.Op&fsnotify.Rename == fsnotify.Rename {
+				if event.Op&fsnotify.Rename > 0 {
 					// Renaming a file also triggers a separate fsnotify.Create event with
 					// the new filename (tested on Linux).
 					ReplyJSON(H{"evt": "renamed", "path": event.Name, "id": w.id}, reply)
 				}
+
 			case err := <-watcher.Errors:
-				logrus.Errorf("fs.Watch: fsnotify watcher error on %q, err: %v", j.Path, err)
+				// watcher shouldn't stop when it publishes error
+				logrus.Warnf("fs.Watch: fsnotify watcher error on %q, err: %v", j.Path, err)
 				ReplyJSON(H{"error": "file_watcher_error"}, reply)
-				ReplyJSON(H{"evt": "stopped", "id": w.id}, reply)
+
+			case <-c.OnClose:
+				stop()
 				return
+
 			case <-w.stop:
-				ReplyJSON(H{"evt": "stopped", "id": w.id}, reply)
-				w.stopped <- struct{}{}
+				stop()
 				return
 			}
 		}
@@ -151,6 +179,7 @@ func Watch(c *ws.Context) {
 }
 
 func Unwatch(c *ws.Context) {
+	defer c.Done()
 	data := c.Data
 	reply := c.Reply
 
@@ -167,34 +196,17 @@ func Unwatch(c *ws.Context) {
 		return
 	}
 
-	stopWatch(j.ID)
-
-	ReplyJSON(H{"evt": "unwatched", "id": j.ID}, reply)
-}
-
-func newWatch() *watch {
-	w := &watch{
-		id:      uuid.NewV4().String(),
-		stop:    make(chan struct{}),
-		stopped: make(chan struct{}),
-	}
-
-	watches[w.id] = w
-
-	return w
-}
-
-func stopWatch(id string) {
-	w, ok := watches[id]
+	w, ok := watches[j.ID]
 	if !ok {
 		return
 	}
 
-	var once sync.Once
-	once.Do(func() {
+	watchesLock.Lock()
+	defer watchesLock.Unlock()
+	delete(watches, j.ID)
+
+	w.stopOnce.Do(func() {
 		w.stop <- struct{}{}
-		<-w.stopped
-		delete(watches, id)
 	})
 }
 
