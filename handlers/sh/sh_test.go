@@ -92,6 +92,7 @@ var _ = Describe("sh", func() {
 				sh.Start(&ws.Context{
 					Data:  EncodeJSON(params),
 					Reply: cb,
+					Done:  Noop,
 				})
 				j := parseResponseJSON()
 				Expect(j["error"]).To(Equal("invalid_params"))
@@ -104,6 +105,7 @@ var _ = Describe("sh", func() {
 				sh.Start(&ws.Context{
 					Data:  EncodeJSON(params),
 					Reply: cb,
+					Done:  Noop,
 				})
 				j := parseResponseJSON()
 				Expect(j["error"]).To(Equal("invalid_params"))
@@ -117,6 +119,7 @@ var _ = Describe("sh", func() {
 					sh.Start(&ws.Context{
 						Data:  EncodeJSON(params),
 						Reply: cb,
+						Done:  Noop,
 					})
 					j := parseResponseJSON()
 					Expect(j["error"]).To(Equal("failed_to_start_shell_session"))
@@ -131,6 +134,7 @@ var _ = Describe("sh", func() {
 					sh.Start(&ws.Context{
 						Data:  EncodeJSON(params),
 						Reply: cb,
+						Done:  Noop,
 					})
 
 					Expect(fake.ShellStartAndAttachCalls.Count()).To(Equal(1))
@@ -157,6 +161,7 @@ var _ = Describe("sh", func() {
 					sh.Start(&ws.Context{
 						Data:  EncodeJSON(params),
 						Reply: cb,
+						Done:  Noop,
 					})
 
 					Expect(fake.ShellStartAndAttachCalls.Count()).To(Equal(1))
@@ -197,6 +202,7 @@ var _ = Describe("sh", func() {
 				sh.Attach(&ws.Context{
 					Data:  EncodeJSON(params),
 					Reply: cb,
+					Done:  Noop,
 				})
 				j := parseResponseJSON()
 				Expect(j["error"]).To(Equal("invalid_params"))
@@ -210,6 +216,7 @@ var _ = Describe("sh", func() {
 				sh.Attach(&ws.Context{
 					Data:  EncodeJSON(params),
 					Reply: cb,
+					Done:  Noop,
 				})
 
 				Expect(fake.ShellAttachCalls.Count()).To(Equal(1))
@@ -231,6 +238,7 @@ var _ = Describe("sh", func() {
 				sh.Attach(&ws.Context{
 					Data:  EncodeJSON(params),
 					Reply: cb,
+					Done:  Noop,
 				})
 
 				Expect(fake.ShellAttachCalls.Count()).To(Equal(1))
@@ -264,6 +272,7 @@ var _ = Describe("sh", func() {
 				sh.Detach(&ws.Context{
 					Data:  EncodeJSON(params),
 					Reply: cb,
+					Done:  Noop,
 				})
 				j := parseResponseJSON()
 				Expect(j["error"]).To(Equal("invalid_params"))
@@ -276,6 +285,7 @@ var _ = Describe("sh", func() {
 				sh.Detach(&ws.Context{
 					Data:  EncodeJSON(params),
 					Reply: cb,
+					Done:  Noop,
 				})
 				j := parseResponseJSON()
 				Expect(j["error"]).To(Equal("invalid_params"))
@@ -287,6 +297,7 @@ var _ = Describe("sh", func() {
 				sh.Detach(&ws.Context{
 					Data:  EncodeJSON(params),
 					Reply: cb,
+					Done:  Noop,
 				})
 
 				Expect(fake.ShellDetachCalls.Count()).To(Equal(1))
@@ -317,6 +328,7 @@ var _ = Describe("sh", func() {
 				params = A{}
 				sh.Input(&ws.Context{
 					Data: EncodeJSON(params),
+					Done: Noop,
 				})
 				Expect(fake.ShellInputCalls.Count()).To(BeZero())
 			})
@@ -327,6 +339,7 @@ var _ = Describe("sh", func() {
 				params = A{"1234"}
 				sh.Input(&ws.Context{
 					Data: EncodeJSON(params),
+					Done: Noop,
 				})
 				Expect(fake.ShellInputCalls.Count()).To(BeZero())
 			})
@@ -336,6 +349,7 @@ var _ = Describe("sh", func() {
 			It("decodes the base64-encoded data and sends an input to a shell session", func() {
 				sh.Input(&ws.Context{
 					Data: EncodeJSON(params),
+					Done: Noop,
 				})
 
 				Expect(fake.ShellInputCalls.Count()).To(Equal(1))
@@ -364,6 +378,7 @@ var _ = Describe("sh", func() {
 				params = A{}
 				sh.Resize(&ws.Context{
 					Data: EncodeJSON(params),
+					Done: Noop,
 				})
 				Expect(fake.ShellResizeCalls.Count()).To(BeZero())
 			})
@@ -375,6 +390,7 @@ var _ = Describe("sh", func() {
 				params = A{"1234", 80}
 				sh.Resize(&ws.Context{
 					Data: EncodeJSON(params),
+					Done: Noop,
 				})
 				Expect(fake.ShellResizeCalls.Count()).To(BeZero())
 			})
@@ -384,6 +400,7 @@ var _ = Describe("sh", func() {
 			It("sends a resize message to a shell session", func() {
 				sh.Resize(&ws.Context{
 					Data: EncodeJSON(params),
+					Done: Noop,
 				})
 
 				Expect(fake.ShellResizeCalls.Count()).To(Equal(1))
@@ -411,6 +428,7 @@ var _ = Describe("sh", func() {
 				delete(params, "shell_session_id")
 				sh.Kill(&ws.Context{
 					Data: EncodeJSON(params),
+					Done: Noop,
 				})
 
 				Expect(fake.ShellKillCalls.Count()).To(BeZero())
@@ -421,6 +439,7 @@ var _ = Describe("sh", func() {
 			It("sends a kill message to a shell session", func() {
 				sh.Kill(&ws.Context{
 					Data: EncodeJSON(params),
+					Done: Noop,
 				})
 
 				Expect(fake.ShellKillCalls.Count()).To(Equal(1))
@@ -436,6 +455,7 @@ var _ = Describe("sh", func() {
 		It("asks for a list of shell sessions with a reply func", func() {
 			sh.List(&ws.Context{
 				Reply: cb,
+				Done:  Noop,
 			})
 
 			Expect(fake.ShellListCalls.Count()).To(Equal(1))

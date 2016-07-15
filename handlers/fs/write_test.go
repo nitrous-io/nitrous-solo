@@ -71,6 +71,7 @@ var _ = Describe("fs.Write", func() {
 				"login": "foo",
 				"user":  runAs,
 			},
+			Done: Noop,
 		})
 
 		Expect(res).NotTo(BeNil())
@@ -104,6 +105,7 @@ var _ = Describe("fs.Write", func() {
 					"login": "foo",
 					"user":  runAs,
 				},
+				Done: Noop,
 			})
 			Expect(res).NotTo(BeNil())
 
@@ -125,6 +127,7 @@ var _ = Describe("fs.Write", func() {
 					"login": "foo",
 					"user":  runAs,
 				},
+				Done: Noop,
 			})
 
 			j := parseResponseJSON()
@@ -149,6 +152,7 @@ var _ = Describe("fs.Write", func() {
 						"login": "foo",
 						"user":  runAs,
 					},
+					Done: Noop,
 				})
 
 				Expect(res).NotTo(BeNil())
@@ -177,6 +181,7 @@ var _ = Describe("fs.Write", func() {
 						"login": "foo",
 						"user":  runAs,
 					},
+					Done: Noop,
 				})
 
 				Expect(res).NotTo(BeNil())
@@ -202,6 +207,7 @@ var _ = Describe("fs.Write", func() {
 						"login": "foo",
 						"user":  runAs,
 					},
+					Done: Noop,
 				})
 				Expect(res).NotTo(BeNil())
 
@@ -230,6 +236,7 @@ var _ = Describe("fs.Write", func() {
 							"login": "foo",
 							"user":  runAs,
 						},
+						Done: Noop,
 					})
 					Expect(res).NotTo(BeNil())
 

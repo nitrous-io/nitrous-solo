@@ -20,6 +20,7 @@ var (
 )
 
 func Start(c *ws.Context) {
+	defer c.Done()
 	data := c.Data
 	reply := c.Reply
 
@@ -76,6 +77,7 @@ func Start(c *ws.Context) {
 }
 
 func Attach(c *ws.Context) {
+	defer c.Done()
 	data := c.Data
 	reply := c.Reply
 
@@ -116,6 +118,7 @@ func Attach(c *ws.Context) {
 }
 
 func Detach(c *ws.Context) {
+	defer c.Done()
 	data := c.Data
 	reply := c.Reply
 
@@ -147,6 +150,7 @@ func Detach(c *ws.Context) {
 }
 
 func Input(c *ws.Context) {
+	defer c.Done()
 	data := c.Data
 
 	if len(data) == 0 {
@@ -176,6 +180,7 @@ func Input(c *ws.Context) {
 }
 
 func Resize(c *ws.Context) {
+	defer c.Done()
 	data := c.Data
 
 	if len(data) == 0 {
@@ -220,6 +225,7 @@ func Resize(c *ws.Context) {
 }
 
 func Kill(c *ws.Context) {
+	defer c.Done()
 	data := c.Data
 
 	if len(data) == 0 {
@@ -242,5 +248,6 @@ func Kill(c *ws.Context) {
 }
 
 func List(c *ws.Context) {
+	defer c.Done()
 	ShellList(c.Reply)
 }
