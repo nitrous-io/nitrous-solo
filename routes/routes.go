@@ -8,6 +8,8 @@ import (
 	"github.com/nitrous-io/nitrous-solo/controllers/ping"
 	"github.com/nitrous-io/nitrous-solo/controllers/root"
 	"github.com/nitrous-io/nitrous-solo/controllers/socket"
+	"github.com/nitrous-io/nitrous-solo/controllers/user"
+	"github.com/nitrous-io/nitrous-solo/middleware"
 	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 
 	"github.com/nitrous-io/nitrous-solo/handlers/fs"
@@ -25,9 +27,13 @@ func Draw(r *gin.Engine, appDir string) {
 	r.Static("/assets", filepath.Join(appDir, "assets"))
 	r.GET("/ping", ping.Ping)
 
+	r.POST("/token", auth.CreateToken)
 	r.GET("/socket", socket.Socket)
 
-	r.POST("/token", auth.CreateToken)
+	{ // routes requiring authentication
+		ar := r.Group("", middleware.VerifyToken)
+		ar.GET("/user", user.Show)
+	}
 
 	ws.RegisterHandler("ping", ping_.Ping)
 	ws.RegisterHandler("fs.ls", fs.List)

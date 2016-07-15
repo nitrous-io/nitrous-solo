@@ -67,3 +67,16 @@ func GetUserDataByToken(tok string) *data.UserData {
 
 	return ud
 }
+
+func CurrentUserData(c *gin.Context) *data.UserData {
+	ui, exists := c.Get(CurrentUserDataKey)
+	if ui == nil || !exists {
+		return nil
+	}
+
+	ud, ok := ui.(*data.UserData)
+	if !ok {
+		return nil
+	}
+	return ud
+}
