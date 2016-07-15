@@ -283,6 +283,79 @@ var _ = Describe("fs", func() {
 				Expect(j["path"]).To(Equal(filepath.Join(testDir, "spec", "helpers", "app_helper.rb")))
 				Expect(j["evt"]).To(Equal("created"))
 			})
+
+			Context("the directory gets deleted", func() {
+				var subDir string
+
+				BeforeEach(func() {
+					var err error
+					// Create some files in the directory.
+					subDir = filepath.Join(testDir, "subdir")
+					Expect(os.Mkdir(subDir, 0775)).To(BeNil())
+					Expect(err).To(BeNil())
+
+					f, err := os.Create(filepath.Join(subDir, "script"))
+					Expect(err).To(BeNil())
+					f.Close()
+				})
+
+				It("stops the watcher for the folder", func() {
+					doneCalled := false
+					doneFn := func() {
+						doneCalled = true
+					}
+
+					Watch(&ws.Context{
+						Data:    []byte(`{"path": "` + subDir + `"}`),
+						Reply:   cb,
+						OnClose: onClose,
+						Done:    doneFn,
+					})
+
+					res := rc.next()
+					Expect(res).NotTo(BeEmpty())
+
+					j := parseResponseJSON(res)
+					Expect(j["evt"]).To(Equal("started"))
+					watchID, ok := j["id"].(string)
+					Expect(ok).To(BeTrue())
+					Expect(watchID).NotTo(BeEmpty())
+
+					// Delete the watching folder
+					Expect(os.RemoveAll(testDir)).To(BeNil())
+					time.Sleep(10 * time.Millisecond)
+
+					var responses [][]byte
+					res = rc.next()
+					for len(res) > 0 {
+						responses = append(responses, res)
+						res = rc.next()
+					}
+
+					Expect(responses).To(HaveLen(3))
+
+					j = parseResponseJSON(responses[0])
+					Expect(j["id"]).To(Equal(watchID))
+					Expect(j["path"]).To(Equal(filepath.Join(subDir, "script")))
+					Expect(j["evt"]).To(Equal("removed"))
+
+					j = parseResponseJSON(responses[1])
+					Expect(j["id"]).To(Equal(watchID))
+					Expect(j["path"]).To(Equal(subDir))
+					Expect(j["evt"]).To(Equal("removed"))
+
+					j = parseResponseJSON(responses[2])
+					Expect(j["id"]).To(Equal(watchID))
+					Expect(j["evt"]).To(Equal("stopped"))
+
+					Expect(doneCalled).To(BeTrue())
+
+					// Create the watching folder
+					Expect(os.MkdirAll(subDir, 0775)).To(BeNil())
+					time.Sleep(10 * time.Millisecond)
+					Expect(rc.next()).To(BeEmpty())
+				})
+			})
 		})
 
 		Context("when the given path is a symlink to a directory", func() {
