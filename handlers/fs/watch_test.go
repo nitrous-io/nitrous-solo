@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 	. "github.com/nitrous-io/nitrous-solo/testhelper"
@@ -42,14 +43,32 @@ var _ = Describe("fs", func() {
 
 	BeforeEach(func() {
 		rc = resCollection{}
+		SetDefaultEventuallyTimeout(10 * time.Second)
 	})
 
-	Describe("fs.Watch / fs.Unwatch", func() {
+	AfterEach(func() {
+		SetDefaultEventuallyTimeout(1 * time.Second)
+	})
+
+	Describe("fs.Watch", func() {
+		var onClose chan struct{}
+
+		BeforeEach(func() {
+			onClose = make(chan struct{}, 1)
+		})
+
+		AfterEach(func() {
+			// close connection
+			onClose <- struct{}{}
+		})
+
 		Context("when invalid JSON is given", func() {
 			It("returns an error", func() {
 				Watch(&ws.Context{
-					Data:  []byte(`{invalid JSON`),
-					Reply: cb,
+					Data:    []byte(`{invalid JSON`),
+					Reply:   cb,
+					OnClose: onClose,
+					Done:    Noop,
 				})
 
 				res := rc.next()
@@ -63,8 +82,10 @@ var _ = Describe("fs", func() {
 		Context("when the given path does not exist", func() {
 			It("returns an error", func() {
 				Watch(&ws.Context{
-					Data:  []byte(`{"path": "/does-not-exist"}`),
-					Reply: cb,
+					Data:    []byte(`{"path": "/does-not-exist"}`),
+					Reply:   cb,
+					OnClose: onClose,
+					Done:    Noop,
 				})
 				res := rc.next()
 				Expect(res).NotTo(BeEmpty())
@@ -81,8 +102,10 @@ var _ = Describe("fs", func() {
 				defer os.Remove(tmpfile.Name())
 
 				Watch(&ws.Context{
-					Data:  []byte(`{"path": "` + tmpfile.Name() + `"}`),
-					Reply: cb,
+					Data:    []byte(`{"path": "` + tmpfile.Name() + `"}`),
+					Reply:   cb,
+					OnClose: onClose,
+					Done:    Noop,
 				})
 
 				res := rc.next()
@@ -105,6 +128,7 @@ var _ = Describe("fs", func() {
 				f, err := os.Create(filepath.Join(testDir, "README.md"))
 				Expect(err).To(BeNil())
 				f.Close()
+
 				err = os.MkdirAll(filepath.Join(testDir, "script"), 0755)
 				Expect(err).To(BeNil())
 				f, err = os.Create(filepath.Join(testDir, "script", "server"))
@@ -118,8 +142,10 @@ var _ = Describe("fs", func() {
 
 			It("responds with events when there are filesystem changes in the directory", func() {
 				Watch(&ws.Context{
-					Data:  []byte(`{"path": "` + testDir + `"}`),
-					Reply: cb,
+					Data:    []byte(`{"path": "` + testDir + `"}`),
+					Reply:   cb,
+					OnClose: onClose,
+					Done:    Noop,
 				})
 
 				res := rc.next()
@@ -130,13 +156,11 @@ var _ = Describe("fs", func() {
 				watchID, ok := j["id"].(string)
 				Expect(ok).To(BeTrue())
 				Expect(watchID).NotTo(Equal(""))
-				defer Unwatch(&ws.Context{
-					Data:  []byte(`{"id": "` + watchID + `"}`),
-					Reply: cb,
-				})
 
-				// Modify a file.
-				err := ioutil.WriteFile(filepath.Join(testDir, "README.md"), []byte("new content"), 0644)
+				// There is no guarantee that ioutil.WriteFile writes to disk all at once,
+				// so it was sometimes producing multiple "modified" events due to multiple
+				// writes happening, causing random test failures. Write only one byte to ensure Write().
+				err := ioutil.WriteFile(filepath.Join(testDir, "README.md"), []byte("h"), 0644)
 				Expect(err).To(BeNil())
 
 				Eventually(func() Any {
@@ -213,8 +237,10 @@ var _ = Describe("fs", func() {
 
 			It("watches any newly created subdirectories for changes", func() {
 				Watch(&ws.Context{
-					Data:  []byte(`{"path": "` + testDir + `"}`),
-					Reply: cb,
+					Data:    []byte(`{"path": "` + testDir + `"}`),
+					Reply:   cb,
+					OnClose: onClose,
+					Done:    Noop,
 				})
 
 				res := rc.next()
@@ -225,10 +251,6 @@ var _ = Describe("fs", func() {
 				watchID, ok := j["id"].(string)
 				Expect(ok).To(BeTrue())
 				Expect(watchID).NotTo(Equal(""))
-				defer Unwatch(&ws.Context{
-					Data:  []byte(`{"id": "` + watchID + `"}`),
-					Reply: cb,
-				})
 
 				// Create subdirectory 2 levels deep.
 				err := os.MkdirAll(filepath.Join(testDir, "spec", "helpers"), 0755)
@@ -277,8 +299,10 @@ var _ = Describe("fs", func() {
 				Expect(err).To(BeNil())
 
 				Watch(&ws.Context{
-					Data:  []byte(`{"path": "` + symlinkDir + `"}`),
-					Reply: cb,
+					Data:    []byte(`{"path": "` + symlinkDir + `"}`),
+					Reply:   cb,
+					OnClose: onClose,
+					Done:    Noop,
 				})
 
 				res := rc.next()
@@ -289,10 +313,6 @@ var _ = Describe("fs", func() {
 				watchID, ok := j["id"].(string)
 				Expect(ok).To(BeTrue())
 				Expect(watchID).NotTo(Equal(""))
-				defer Unwatch(&ws.Context{
-					Data:  []byte(`{"id": "` + watchID + `"}`),
-					Reply: cb,
-				})
 
 				// Create a file.
 				f, err := os.Create(filepath.Join(testDir1, "CHANGELOG.md"))
@@ -311,6 +331,67 @@ var _ = Describe("fs", func() {
 				// it when we know for sure after we integrate with the IDE.
 				Expect(j["path"]).To(Equal(filepath.Join(testDir1, "CHANGELOG.md")))
 				Expect(j["evt"]).To(Equal("created"))
+			})
+		})
+
+		Context("when OnClose channel receives a message", func() {
+			It("stops watching a directory for changes and calls ws.Context.Done", func() {
+				testDir, err := ioutil.TempDir("/tmp", "subdirectories-test")
+				Expect(err).To(BeNil())
+				defer os.RemoveAll(testDir)
+
+				// Create some files in the directory.
+				f, err := os.Create(filepath.Join(testDir, "README.md"))
+				Expect(err).To(BeNil())
+				f.Close()
+				err = os.MkdirAll(filepath.Join(testDir, "script"), 0755)
+				Expect(err).To(BeNil())
+				f, err = os.Create(filepath.Join(testDir, "script", "server"))
+				Expect(err).To(BeNil())
+				f.Close()
+
+				doneCalled := false
+				doneFn := func() {
+					doneCalled = true
+				}
+
+				Watch(&ws.Context{
+					Data:    []byte(`{"path": "` + testDir + `"}`),
+					Reply:   cb,
+					OnClose: onClose,
+					Done:    doneFn,
+				})
+
+				res := rc.next()
+				Expect(res).NotTo(BeEmpty())
+
+				j := parseResponseJSON(res)
+				Expect(j["evt"]).To(Equal("started"))
+				watchID, ok := j["id"].(string)
+				Expect(ok).To(BeTrue())
+				Expect(watchID).NotTo(Equal(""))
+
+				onClose <- struct{}{}
+
+				Eventually(func() Any {
+					res = rc.next()
+					return res
+				}).ShouldNot(BeEmpty())
+
+				Expect(res).NotTo(BeEmpty())
+				j = parseResponseJSON(res)
+				Expect(j["id"]).To(Equal(watchID))
+				Expect(j["evt"]).To(Equal("stopped"))
+
+				// done function should have been called to clean up onClose hash
+				Expect(doneCalled).To(BeTrue())
+
+				// Modify a file and make sure we don't get any events.
+				err = ioutil.WriteFile(filepath.Join(testDir, "README.md"), []byte("h"), 0644)
+				Expect(err).To(BeNil())
+
+				time.Sleep(10 * time.Millisecond) // wait a little to give fsnotify a chance to detect changes
+				Expect(rc.next()).To(BeEmpty())
 			})
 		})
 	})
@@ -334,6 +415,7 @@ var _ = Describe("fs", func() {
 			Watch(&ws.Context{
 				Data:  []byte(`{"path": "` + testDir + `"}`),
 				Reply: cb,
+				Done:  Noop,
 			})
 
 			res := rc.next()
@@ -348,6 +430,7 @@ var _ = Describe("fs", func() {
 			Unwatch(&ws.Context{
 				Data:  []byte(`{"id": "` + watchID + `"}`),
 				Reply: cb,
+				Done:  Noop,
 			})
 
 			Eventually(func() Any {
@@ -360,20 +443,12 @@ var _ = Describe("fs", func() {
 			Expect(j["id"]).To(Equal(watchID))
 			Expect(j["evt"]).To(Equal("stopped"))
 
-			res = rc.next()
-			Expect(res).NotTo(BeEmpty())
-			j = parseResponseJSON(res)
-			Expect(j["id"]).To(Equal(watchID))
-			Expect(j["evt"]).To(Equal("unwatched"))
-
 			// Modify a file and make sure we don't get any events.
-			err = ioutil.WriteFile(filepath.Join(testDir, "README.md"), []byte("new content"), 0644)
+			err = ioutil.WriteFile(filepath.Join(testDir, "README.md"), []byte("h"), 0644)
 			Expect(err).To(BeNil())
 
-			Eventually(func() Any {
-				res = rc.next()
-				return res
-			}).Should(BeEmpty())
+			time.Sleep(10 * time.Millisecond) // wait a little to give fsnotify a chance to detect changes
+			Expect(rc.next()).To(BeEmpty())
 		})
 
 		Context("when unwatch is performed twice", func() {
@@ -388,6 +463,7 @@ var _ = Describe("fs", func() {
 				Watch(&ws.Context{
 					Data:  []byte(`{"path": "` + testDir + `"}`),
 					Reply: cb,
+					Done:  Noop,
 				})
 
 				res := rc.next()
@@ -402,6 +478,7 @@ var _ = Describe("fs", func() {
 				Unwatch(&ws.Context{
 					Data:  []byte(`{"id": "` + watchID + `"}`),
 					Reply: cb,
+					Done:  Noop,
 				})
 
 				Eventually(func() Any {
@@ -413,30 +490,16 @@ var _ = Describe("fs", func() {
 				Expect(j["id"]).To(Equal(watchID))
 				Expect(j["evt"]).To(Equal("stopped"))
 
-				res = rc.next()
-				Expect(res).NotTo(BeEmpty())
-				j = parseResponseJSON(res)
-				Expect(j["id"]).To(Equal(watchID))
-				Expect(j["evt"]).To(Equal("unwatched"))
-
 				Unwatch(&ws.Context{
 					Data:  []byte(`{"id": "` + watchID + `"}`),
 					Reply: cb,
+					Done:  Noop,
 				})
 
-				Eventually(func() Any {
-					res = rc.next()
-					return res
-				}).ShouldNot(BeEmpty())
-
-				j = parseResponseJSON(res)
-				Expect(j["id"]).To(Equal(watchID))
-				Expect(j["evt"]).To(Equal("unwatched"))
-
+				time.Sleep(10 * time.Millisecond) // wait a little to see if another message is received
 				// There should only be a single "unwatched" event, and no "stopped"
 				// event (since the previous unwatch already stopped it).
-				res = rc.next()
-				Expect(res).To(BeEmpty())
+				Expect(rc.next()).To(BeEmpty())
 			})
 		})
 	})
