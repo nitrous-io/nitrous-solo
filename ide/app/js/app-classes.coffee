@@ -27,4 +27,4 @@ req(key) for key in req.keys()
 
 # all classes except router are loaded
 App.trigger 'load'
-require "./routes"
+require "./routes.js"
