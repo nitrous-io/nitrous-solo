@@ -61,8 +61,12 @@ func (c *conn) readPump() {
 			parseAndHandleMessage(c, rawMsg)
 		}
 	}
+
+	hub.lock.Lock()
+	defer hub.lock.Unlock()
 	for ch, _ := range c.onCloseChans {
 		ch <- struct{}{}
+		delete(c.onCloseChans, ch)
 		close(ch)
 	}
 }

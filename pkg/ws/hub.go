@@ -79,8 +79,11 @@ func (h *hubType) run() {
 					Done: func() {
 						h.lock.Lock()
 						defer h.lock.Unlock()
-						delete(conn.onCloseChans, onClose)
-						close(onClose)
+						_, ok := conn.onCloseChans[onClose]
+						if ok {
+							delete(conn.onCloseChans, onClose)
+							close(onClose)
+						}
 					},
 				})
 			}
