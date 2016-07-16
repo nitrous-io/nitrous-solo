@@ -1,4 +1,4 @@
-require './ot'
+require '!!script!../vendor/ot'
 
 class ot.CollabSocketAdapter
   constructor: (sock, namespace) ->

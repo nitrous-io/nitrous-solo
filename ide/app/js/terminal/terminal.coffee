@@ -1,6 +1,6 @@
-require '../vendor/polyfills'
+require '!!script!../vendor/polyfills'
 require '../lib/socket/socket-connection'
-require 'script!../vendor/term'
+require '!!script!../vendor/term'
 
 parentWindow = window.parent
 parentWindow = null if parentWindow == window
