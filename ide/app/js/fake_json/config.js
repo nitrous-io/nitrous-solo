@@ -1,4 +1,4 @@
-window.FakeJSON = {
+module.exports = {
   user: {
     username: 'nitrous',
     email: 'nitrous@nitrous.io'
