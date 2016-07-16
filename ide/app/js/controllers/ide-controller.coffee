@@ -39,8 +39,9 @@ App.IdeController = Em.ObjectController.extend
     router.get('ideEditorController').initialize()
     router.get('ideConsoleController').initialize()
 
-    @set 'socket', socket = App.Socket.create()
-    socket.connect()
+    if App.localStorage.get('token')
+      @set 'socket', socket = App.Socket.create()
+      socket.connect()
 
     #pingerSocket = App.PingerSocket.create
     #  hostId: container.get('host_id')
