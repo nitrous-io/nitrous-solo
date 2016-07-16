@@ -1,4 +1,4 @@
-CodeMirror = require('../lib/codemirror')
+require('../lib/codemirror')
 
 DEFAULT_FONT_SIZE = 14
 

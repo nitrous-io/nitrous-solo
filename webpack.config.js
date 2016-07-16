@@ -27,7 +27,7 @@ var jsConfig = {
   },
   module: {
     loaders: [
-      { test: /\.js$/, include: path.join(APP_JS_DIR, 'socket'), loader: 'babel' },
+      { test: /\.js$/, loader: 'babel', exclude: [path.join(APP_JS_DIR, 'vendor')] },
       { test: /\.coffee$/, loader: 'coffee' },
       { test: /\.emblem$/, loader: 'legacy-ember-emblem-loader', query: { appPath: APP_JS_DIR } }
     ]
