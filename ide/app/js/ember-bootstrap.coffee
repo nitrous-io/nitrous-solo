@@ -62,9 +62,7 @@ window.NitrousIO = Em.Application.extend Em.Evented,
     App.set 'title', "#{slug} · IDE"
   ).observes 'slug'
 
-window.App = NitrousIO.create
-  token: window.localStorage.getItem('token')
-
+window.App = NitrousIO.create()
 window.Lib = Ember.Namespace.create()
 
 App.on 'load', ->
