@@ -19,7 +19,5 @@ App.User = klass = Em.Object.extend
 
 klass.reopenClass
   fetch: ->
-    new Ember.RSVP.Promise (resolve, reject) =>
-      resolve(App.User.create(
-        FakeJSON.user
-      ))
+    new Em.RSVP.Promise (resolve, reject) =>
+      resolve(App.User.create(FakeJSON.user))
