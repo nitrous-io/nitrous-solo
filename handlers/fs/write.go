@@ -168,6 +168,7 @@ func Write(c *ws.Context) {
 
 	// move tmp file over to the intended file path
 	if err := os.Rename(f.Name(), j.Path); err != nil {
+		os.Remove(f.Name())
 		ReplyUnexpectedError(err, reply)
 		return
 	}
