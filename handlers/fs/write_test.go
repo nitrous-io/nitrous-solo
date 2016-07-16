@@ -245,5 +245,29 @@ var _ = Describe("fs.Write", func() {
 				})
 			})
 		})
+
+		Context("when the file path is not absolute", func() {
+			BeforeEach(func() {
+				pathToWrite = "bar.txt"
+			})
+
+			It("returns an error", func() {
+				fs.Write(&ws.Context{
+					Data:  EncodeJSON(H{"path": pathToWrite, "content": base64.StdEncoding.EncodeToString([]byte("hello world"))}),
+					Reply: cb,
+					Meta: map[string]interface{}{
+						"login": "foo",
+						"user":  runAs,
+					},
+					Done: Noop,
+				})
+
+				Expect(res).NotTo(BeNil())
+
+				j := parseResponseJSON()
+				Expect(j["error"]).To(Equal("path_is_not_absolute"))
+			})
+		})
+
 	})
 })

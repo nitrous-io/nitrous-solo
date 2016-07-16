@@ -42,6 +42,11 @@ func Write(c *ws.Context) {
 		return
 	}
 
+	if !filepath.IsAbs(j.Path) {
+		ReplyJSON(H{"error": "path_is_not_absolute"}, reply)
+		return
+	}
+
 	fi, err := os.Lstat(j.Path)
 	if err != nil && !os.IsNotExist(err) {
 		ReplyUnexpectedError(err, reply)
