@@ -22,7 +22,6 @@ var rootIndex = strings.TrimSpace(`
     <script>
       this.NitrousConfig = {{ .config }};
     </script>
-    <script src="/assets/socket_test.js"></script>
     <script src="/assets/bundle.js"></script>
   </body>
 </html>

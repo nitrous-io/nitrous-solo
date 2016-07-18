@@ -1,38 +1,20 @@
 require '!!script!../vendor/polyfills'
-require '../lib/socket/socket-connection'
 require '!!script!../vendor/term'
 
 parentWindow = window.parent
 parentWindow = null if parentWindow == window
 
 isMac = navigator.userAgent.indexOf("Macintosh") != -1
-
 chromeApp = parentWindow?.App?.get('chromeApp') || false
 
-utf8Decoder = new window.TextDecoder('utf8')
-
-utf8Decode = (data) ->
-  utf8Decoder.decode(new DataView(data))
-
-appendBuffer = (buffer1, buffer2) ->
-  if !buffer1? || buffer1.byteLength == 0
-    return buffer2
-  tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength)
-  tmp.set(new Uint8Array(buffer1), 0)
-  tmp.set(new Uint8Array(buffer2), buffer1.byteLength)
-  tmp.buffer
+decodeUTF8 = (s) ->
+  decodeURIComponent(escape(s))
 
 window.NitrousTerminal =
   term: null
-  conn: null
-  url: null
-  closed: false
   firstConnect: true
   readonly: false
-  binaryMode: false
   ide: false
-
-  shellId: null
 
   resizeTimeout: null
 
@@ -40,17 +22,11 @@ window.NitrousTerminal =
   bufferTimeout: null
 
   init: ->
-    @conn = conn = new SocketConnection()
-    conn.onbeforeopen   = => @willOpen()
-    conn.onopen    = (ev) => @didOpen(ev)
-    conn.onmessage = (ev) => @didReceiveMessage(ev)
-    conn.onerror   = (ev) => @didFail(ev)
-    conn.onclose   = (ev) => @didClose(ev)
-
     @term = term = new Terminal(80, 25)
     term.open(document.body)
     term.sizeToFit()
     term.showCursor()
+    term.convertEol = true
 
     term.originalKeyDown = @term.keyDown
     term.keyDown = (event) =>
@@ -80,15 +56,14 @@ window.NitrousTerminal =
       term.originalKeyDown(event)
 
     term.on 'resize', (cols, rows) =>
-      return if @conn.readyState != 1
-      @conn.send "r|#{cols} #{rows}"
+      @onResize(cols, rows)
 
     term.on 'title', (title) =>
       @didChangeTitle(title)
 
     term.handler = (data) =>
-      return if @readonly || @closed || @conn.readyState != 1
-      @conn.send "d|#{data}"
+      return if @readonly
+      @onKeyDown(data)
 
     onresize = =>
       window.onresize = null
@@ -117,34 +92,15 @@ window.NitrousTerminal =
 
     document.addEventListener('copy', @handleCopy, false)
 
-  open: (nobeforeopen) ->
-    @conn.binaryMode = @binaryMode
-
-    @conn.url = @url
-    if @conn.url && @shellId
-      @conn.url += "&shell_id=#{@shellId}"
-    @conn.open(nobeforeopen)
-    @conn.url = null
-
-  retry: ->
-    @conn.retry()
-
   destroy: ->
-    @close()
     @term?.destroy()
-
-  close: (retry=false) ->
-    if !retry
-      @conn?.send 'c|bye'
-      @willOpen = null
-    @conn?.close(retry)
 
   focus: ->
     window.focus()
     @term?.focus()
 
-  willOpen: ->
-    # override me
+  getSize: ->
+    { cols: @term.cols, rows: @term.rows }
 
   didBlur: ->
     # override me
@@ -154,6 +110,9 @@ window.NitrousTerminal =
 
   clear: ->
     @term.write '\x1b[r\x1b[H\x1b[J'
+
+  onKeyDown: ->
+  onResize: ->
 
   handleCopy: ->
     sel = window.getSelection?()
@@ -179,12 +138,15 @@ window.NitrousTerminal =
     true
 
   handleData: (data) ->
+    @dataBuffer ?= ''
     window.clearTimeout(@bufferTimeout)
-    @dataBuffer = appendBuffer(@dataBuffer, data)
-    decoded = utf8Decode(@dataBuffer)
+    @dataBuffer += data
+    decoded = @dataBuffer
+    try
+      decoded = decodeUTF8(@dataBuffer)
 
     flush = =>
-      @dataBuffer = new ArrayBuffer(0)
+      @dataBuffer = ''
       @term.write(decoded)
 
     # if invalid utf8 char is detected, buffer with timeout
@@ -197,38 +159,16 @@ window.NitrousTerminal =
 
     flush()
 
-  didOpen: (ev) ->
-    @closed = false
+  didOpen: () ->
     @term.sizeToFit()
     if @firstConnect
       @firstConnect = false
       @clear()
 
-  didReceiveMessage: (ev) ->
-    type = ev.data.slice(0, 2)
-    switch type
-      when 'i|'
-        newShellId = if @binaryMode
-          utf8Decode(ev.binaryData.slice(2))
-        else
-          ev.data.slice(2)
-        if @shellId && @shellId != newShellId
-          @term.write "\r\n[Connection timed out]\r\n"
-        @shellId = newShellId
-      when 'd|'
-        if @binaryMode
-          @handleData(ev.binaryData.slice(2))
-        else
-          @term.write(ev.data.slice(2))
-      when 'c|'
-        @close()
+  didFail: (err) ->
 
-  didFail: (ev) ->
-
-  didClose: (ev) ->
-    @closed = true
-    if @conn?.ws._noRetry
-      @term?.write("\r\n[Session closed]")
+  didExit: (data) ->
+    @term?.write("\r\n[Session closed - #{data}]")
 
   focusEditor: (ev) ->
     return true unless parentWindow?.App?.get
