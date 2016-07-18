@@ -9,19 +9,25 @@ import (
 	"os/user"
 	"strconv"
 	"syscall"
+	"time"
 
 	. "github.com/nitrous-io/nitrous-solo/handlers"
 	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 )
 
-var executor Executor = &StdExecutor{}
+var (
+	executor Executor = &StdExecutor{}
+
+	DefaultTimeout = 30 * time.Second
+)
 
 type Request struct {
-	Cmd   string   `json:"cmd"`
-	Env   []string `json:"env"`
-	Args  []string `json:"args"`
-	RunAs string   `json:"run_as"`
-	WD    string   `json:"wd"`
+	Cmd     string   `json:"cmd"`
+	Env     []string `json:"env"`
+	Args    []string `json:"args"`
+	RunAs   string   `json:"run_as"`
+	WD      string   `json:"wd"`
+	Timeout uint     `json:timeout`
 }
 
 func Run(c *ws.Context) {
@@ -82,16 +88,40 @@ func Run(c *ws.Context) {
 		Credential: &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid)},
 	}
 
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
+	var (
+		stderr  bytes.Buffer
+		output  []byte
+		timeout time.Duration
+	)
 
-	output, err := cmd.Output()
+	cmd.Stderr = &stderr
+	done := make(chan struct{})
+	if req.Timeout != 0 {
+		timeout = time.Duration(req.Timeout) * time.Millisecond
+	} else {
+		timeout = DefaultTimeout
+	}
+
+	go func() {
+		output, err = cmd.Output()
+		done <- struct{}{}
+	}()
+
+	select {
+	case <-done:
+		break
+	case <-time.After(timeout):
+		cmd.Process.Kill()
+		ReplyJSON(H{"error": "command_timeout"}, reply)
+		return
+	}
 
 	res := H{
 		"stdout":    base64.StdEncoding.EncodeToString(output),
 		"stderr":    base64.StdEncoding.EncodeToString(stderr.Bytes()),
 		"exit_code": 0,
 	}
+
 	if err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
