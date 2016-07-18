@@ -68,13 +68,8 @@ App.IdeConsoleSessionView = Em.View.extend App.InjectTerminalIframeMixin,
         consoleSession.set 'terminal', terminal
         terminal.ide = true
         terminal.term.write 'Connecting...'
-        terminal.willOpen = =>
-          controller.makeUrlAndConnect(terminal)
         terminal.didBlur = =>
           consoleSession.set 'focused', false
         terminal.didChangeTitle = (title) =>
           consoleSession.set 'title', title
-        # the following terminal.open() call is only to invoke willOpen()
-        # it will be no-op since no URL is set
-        # makeUrlConnect will then call terminal.open again after setting the URL.
-        terminal.open()
+        controller.startAndAttach(consoleSession, terminal)

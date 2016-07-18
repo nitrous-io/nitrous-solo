@@ -1,5 +1,5 @@
 App.IdeConsoleController = Em.ArrayController.extend App.IdeTabControllerMixin, App.TerminalConnectionMixin,
-  needs: ['ideFileFinder']
+  needs: ['ideFileFinder', 'ide']
 
   modelClass: App.ConsoleSession
   content: null
@@ -17,26 +17,49 @@ App.IdeConsoleController = Em.ArrayController.extend App.IdeTabControllerMixin, 
   reset: ->
     @set 'content', null
 
-  makeUrlAndConnect: (terminal) ->
-    return unless container = App.get('container')
-    @makeUrl(container, terminal, 'shell').then (url) =>
-      # continue to load the terminal
-      terminal.url = url
-      terminal.open(true)
-      terminal.focus()
-    , (jqxhr) ->
-      terminal.retry()
+  startAndAttach: (consoleSession, terminal) ->
+    return unless socket = @get('controllers.ide.socket')
+
+    start = =>
+      onAttach = (subscriptionID, shellSessionID) =>
+        consoleSession.setProperties
+          subscriptionID: subscriptionID
+          shellSessionID: shellSessionID
+        terminal.focus()
+        terminal.didOpen()
+        terminal.onKeyDown = (data) =>
+          socket.shellInput(shellSessionID, data)
+        terminal.onResize = (cols, rows) =>
+          socket.shellResize(shellSessionID, cols, rows)
+
+      onData = (data) =>
+        terminal.handleData(data);
+
+      onError = (err) =>
+        terminal.didFail(err)
+
+      onExit = (data) =>
+        terminal.didExit(data)
+
+      termSize = terminal.getSize()
+
+      socket.shellStart('sudo', [
+        'login', '-f', 'nitrous', '-p', 'TERM=xterm-256color'
+      ], [], '/', 'nitrous', termSize.cols, termSize.rows, onAttach, onData, onError, onExit)
+
+    if socket.get('started')
+      start()
+    else
+      socket.one('open', start)
 
   addTab: (tab, settings = {}) ->
     empty = @get('content.length') == 0
     @_super.apply this, arguments
     if empty
-      App.get('userMetadata').setMetadata({noConsole: null})
       @set 'minimized', false
 
   removeTab: (tab)->
     @_super.apply this, arguments
     if @get('content.length') == 0
-      App.get('userMetadata').setMetadata({noConsole: true})
       unless @get 'fullscreen'
         @set 'minimized', true
