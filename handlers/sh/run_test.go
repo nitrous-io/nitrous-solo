@@ -210,18 +210,6 @@ var _ = Describe("sh", func() {
 			})
 
 			Context("when environment variables are given", func() {
-				var tmpDir string
-
-				BeforeEach(func() {
-					var err error
-					tmpDir, err = ioutil.TempDir("", "test-run")
-					Expect(err).To(BeNil())
-				})
-
-				AfterEach(func() {
-					os.RemoveAll(tmpDir)
-				})
-
 				It("runs the command with given env", func() {
 					Run(&ws.Context{
 						Data: []byte(`{
@@ -255,6 +243,39 @@ var _ = Describe("sh", func() {
 					stdout, err := base64.StdEncoding.DecodeString(j.Stdout)
 					Expect(err).To(BeNil())
 					Expect(stdout).To(Equal([]uint8("BAR QUX !\n")))
+				})
+			})
+
+			Context("when timeout is given", func() {
+				It("return an error and kills the command", func() {
+					Run(&ws.Context{
+						Data: []byte(`{
+							"cmd": "vi",
+							"timeout": 10,
+							"run_as": "` + currUser.Username + `"
+						}`),
+						Reply: cb,
+						Meta: map[string]interface{}{
+							"login": "foo",
+							"user":  currUser.Username,
+						},
+						Done: Noop,
+					})
+					Expect(res).NotTo(BeNil())
+
+					var j map[string]interface{}
+					err := json.Unmarshal(res, &j)
+					Expect(err).To(BeNil())
+					Expect(j["error"]).To(Equal("command_timeout"))
+
+					te, ok := executor.(*TestExecutor)
+					Expect(ok).To(BeTrue())
+					Expect(te.LastCmd).NotTo(BeNil())
+					defer te.LastCmd.Process.Kill() // Make sure the command is killed after test
+
+					Eventually(func() Any {
+						return te.LastCmd.ProcessState.String()
+					}).Should(Equal("signal: killed"))
 				})
 			})
 		})
