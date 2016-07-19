@@ -72,4 +72,7 @@ App.IdeConsoleSessionView = Em.View.extend App.InjectTerminalIframeMixin,
           consoleSession.set 'focused', false
         terminal.didChangeTitle = (title) =>
           consoleSession.set 'title', title
-        controller.startAndAttach(consoleSession, terminal)
+        if consoleSession.get('shellSessionID')
+          controller.attach(consoleSession, terminal)
+        else
+          controller.startAndAttach(consoleSession, terminal)
