@@ -120,7 +120,7 @@ App.Socket = Em.Object.extend(Em.Evented, {
         res = JSON.parse(data);
       } catch(err) {
         done();
-        return
+        return;
       }
 
       cb(res.error);
@@ -129,6 +129,21 @@ App.Socket = Em.Object.extend(Em.Evented, {
   },
 
   deleteFile(path, cb) {
+    this.conn.send('sh.run', JSON.stringify({
+      cmd: "rm",
+      args: [path]
+    }), function(magName, data, done) {
+      let res;
+      try {
+        res = JSON.parse(data);
+      } catch(err) {
+        done();
+        return;
+      }
+
+      cb(res.error);
+      done();
+    });
   },
 
   deleteDir(path, cb) {
@@ -305,7 +320,7 @@ App.Socket = Em.Object.extend(Em.Evented, {
         list = JSON.parse(data);
       } catch(err) {
         done();
-        return
+        return;
       }
       cb(list);
       done();
