@@ -152,6 +152,56 @@ App.Socket = Em.Object.extend(Em.Evented, {
     });
   },
 
+  shellAttach(shellSessionID, cols, rows, onAttach, onData, onError, onExit) {
+    const data = JSON.stringify({
+      shell_session_id: shellSessionID,
+      cols, rows
+    });
+    this.conn.send('sh.attach', data, function(msgName, data, done) {
+      let j;
+      try {
+        j = JSON.parse(data)
+      } catch(err) {
+        onError(err.toString());
+        done();
+        return;
+      }
+
+      if (Array.isArray(j)) {
+        const kind = j[0],
+              data = j[1];
+
+        if (typeof data === 'string') {
+          if (kind === 'd') {
+            let d;
+            try {
+              d = atob(data);
+            } catch(err) {}
+            if (d) {
+              onData(d);
+            }
+          } else if (kind === 'exit') {
+            onExit(data);
+            done();
+            return;
+          }
+        }
+      }
+
+      if (j.error) {
+        onError(j.errorDescription || j.error)
+        done();
+        return;
+      }
+
+      if (j.subscription_id) {
+        onAttach(j.subscription_id, j.scrollback);
+        // attached and expecting more replies - should not call done()
+        return;
+      }
+    });
+  },
+
   // input for interactive terminal
   shellInput(shellSessionID, data) {
     if (!shellSessionID || !data) {
@@ -184,5 +234,19 @@ App.Socket = Em.Object.extend(Em.Evented, {
     this.conn.send('sh.kill', JSON.stringify({
       shell_session_id: shellSessionID
     }));
+  },
+
+  shellList(cb) {
+    this.conn.send('sh.list', null, function(msgName, data, done) {
+      let list;
+      try {
+        list = JSON.parse(data);
+      } catch(err) {
+        done();
+        return
+      }
+      cb(list);
+      done();
+    });
   }
 });
