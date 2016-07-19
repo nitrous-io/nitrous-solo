@@ -33,33 +33,31 @@ App.IdeConsoleController = Em.ArrayController.extend App.IdeTabControllerMixin, 
           socket.shellResize(shellSessionID, cols, rows)
 
       onData = (data) =>
-        terminal.handleData(data);
+        terminal?.handleData(data);
 
       onError = (err) =>
-        terminal.didFail(err)
+        terminal?.didFail(err)
 
       onExit = (data) =>
         terminal.didExit(data)
+        terminal = null
 
       termSize = terminal.getSize()
 
       socket.shellStart('sudo', [
         'login', '-f', 'nitrous', '-p', 'TERM=xterm-256color'
-      ], [], '/', 'nitrous', termSize.cols, termSize.rows, onAttach, onData, onError, onExit)
+      ], [], '/', 'root', termSize.cols, termSize.rows, onAttach, onData, onError, onExit)
 
     if socket.get('started')
       start()
     else
       socket.one('open', start)
 
-  addTab: (tab, settings = {}) ->
-    empty = @get('content.length') == 0
-    @_super.apply this, arguments
-    if empty
-      @set 'minimized', false
+  removeTab: (tab) ->
+    shellSessionID = tab.get('shellSessionID')
+    socket = @get('controllers.ide.socket')
 
-  removeTab: (tab)->
+    if socket && socket.get('started') && shellSessionID
+      socket.shellKill(shellSessionID)
+
     @_super.apply this, arguments
-    if @get('content.length') == 0
-      unless @get 'fullscreen'
-        @set 'minimized', true
