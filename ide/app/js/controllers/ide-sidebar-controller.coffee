@@ -419,6 +419,7 @@ App.IdeSidebarController = Em.ArrayController.extend
 
   delete: (path) ->
     return if path == @get 'rootPath'
+
     deleteMethod = if path.get('directory') then 'deleteDir' else 'deleteFile'
     socket = @get 'socket'
     parentPath = @findParentPath path
@@ -429,6 +430,7 @@ App.IdeSidebarController = Em.ArrayController.extend
       if err
         path.decrementProperty 'loadCount'
         path.set 'beingDeleted', false
+        App.postError(err)
       else
         path.set 'deleted', true
         if parentPath
