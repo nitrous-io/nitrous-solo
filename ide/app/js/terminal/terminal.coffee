@@ -138,6 +138,7 @@ window.NitrousTerminal =
     true
 
   handleData: (data) ->
+    return unless window
     @dataBuffer ?= ''
     window.clearTimeout(@bufferTimeout)
     @dataBuffer += data
