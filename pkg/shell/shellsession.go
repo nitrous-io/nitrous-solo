@@ -8,14 +8,16 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/nitrous-io/nitrous-solo/pkg/fixedbuf"
 	"github.com/nitrous-io/pty"
 	"github.com/satori/go.uuid"
 )
 
 type shellSession struct {
-	id  string
-	cmd *exec.Cmd
-	pty *os.File
+	id     string
+	cmd    *exec.Cmd
+	pty    *os.File
+	buffer *fixedbuf.FixedBuf
 }
 
 type shellWriter struct {
@@ -71,8 +73,9 @@ func startShellSession(cmd string, args, env []string, wd, runAs string) (*shell
 	id := uuid.NewV4().String()
 
 	s := &shellSession{
-		id:  id,
-		cmd: c,
+		id:     id,
+		cmd:    c,
+		buffer: fixedbuf.New(16384),
 	}
 
 	outputWriter := &shellWriter{

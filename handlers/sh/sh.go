@@ -114,10 +114,11 @@ func Attach(c *ws.Context) {
 		j.Rows = 2
 	}
 
-	subscriptionID := ShellAttach(j.ShellSessionID, j.Cols, j.Rows, reply)
+	subscriptionID, scrollback := ShellAttach(j.ShellSessionID, j.Cols, j.Rows, reply)
 
 	ReplyJSON(H{
 		"subscription_id": subscriptionID,
+		"scrollback":      base64.StdEncoding.EncodeToString(scrollback),
 	}, reply)
 }
 

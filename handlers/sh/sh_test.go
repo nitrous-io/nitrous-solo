@@ -231,13 +231,14 @@ var _ = Describe("sh", func() {
 					Reply: cb,
 					Done:  Noop,
 				})
-				j := parseResponseJSON()
-				Expect(j["error"]).To(Equal("invalid_params"))
+				Expect(res).To(MatchJSON(EncodeJSON(H{
+					"error": "invalid_params",
+				})))
 			})
 		})
 
 		Context("when cols and rows are really low", func() {
-			It("attaches with minimum cols and rows and replies with a subscription id", func() {
+			It("attaches with minimum cols and rows and replies with a subscription id and scrollback buffer", func() {
 				params["cols"] = 1
 				params["rows"] = 1
 				sh.Attach(&ws.Context{
@@ -255,13 +256,18 @@ var _ = Describe("sh", func() {
 				Expect(call.Arguments[2]).To(Equal(uint(2)))
 				ExpectSameFunc(call.Arguments[3], cb)
 
-				j := parseResponseJSON()
-				Expect(j["subscription_id"]).To(Equal(call.ReturnValues[0]))
+				scrollback, ok := call.ReturnValues[1].([]byte)
+				Expect(ok).To(BeTrue())
+
+				Expect(res).To(MatchJSON(EncodeJSON(H{
+					"subscription_id": call.ReturnValues[0],
+					"scrollback":      base64.StdEncoding.EncodeToString(scrollback),
+				})))
 			})
 		})
 
 		Context("when there is no other issue", func() {
-			It("attaches to a shell session and replies with a subscription id", func() {
+			It("attaches to a shell session and replies with a subscription id and scrollback buffer", func() {
 				sh.Attach(&ws.Context{
 					Data:  EncodeJSON(params),
 					Reply: cb,
@@ -277,8 +283,13 @@ var _ = Describe("sh", func() {
 				Expect(call.Arguments[2]).To(Equal(uint(25)))
 				ExpectSameFunc(call.Arguments[3], cb)
 
-				j := parseResponseJSON()
-				Expect(j["subscription_id"]).To(Equal(call.ReturnValues[0]))
+				scrollback, ok := call.ReturnValues[1].([]byte)
+				Expect(ok).To(BeTrue())
+
+				Expect(res).To(MatchJSON(EncodeJSON(H{
+					"subscription_id": call.ReturnValues[0],
+					"scrollback":      base64.StdEncoding.EncodeToString(scrollback),
+				})))
 			})
 		})
 	})

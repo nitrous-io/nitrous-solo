@@ -118,9 +118,10 @@ var _ = Describe("pkg/shell", func() {
 				res2 = r
 			}
 
-			sub2ID := Attach(sessID, 100, 50, cb2)
+			sub2ID, scrollback := Attach(sessID, 100, 50, cb2)
 			Expect(sub2ID).NotTo(BeEmpty())
 			Expect(subID).NotTo(Equal(sub2ID))
+			Expect(scrollback).To(BeEmpty())
 
 			Expect(hub.subscriptions).To(HaveLen(1))
 			Expect(hub.subscriptions[sessID]).To(HaveLen(2))
@@ -143,6 +144,14 @@ var _ = Describe("pkg/shell", func() {
 			Expect(err).To(BeNil())
 			Expect(rows).To(Equal(50))
 			Expect(cols).To(Equal(100))
+
+			buf := hub.sessions[sessID].buffer.Bytes()
+			Expect(buf).To(Equal([]byte("hello world")))
+
+			sub3ID, scrollback := Attach(sessID, 100, 50, cb)
+			Expect(sub3ID).NotTo(BeEmpty())
+			Expect(subID).NotTo(Equal(sub3ID))
+			Expect(scrollback).To(Equal([]byte("hello world")))
 		})
 	})
 

@@ -96,21 +96,25 @@ func (h *shellHubType) run() {
 
 		case s := <-h.publish:
 			if subs, ok := h.subscriptions[s.shellSessionID]; ok {
-				for _, sub := range subs {
-					var d string
-					if s.kind == "d" {
-						d = base64.StdEncoding.EncodeToString(s.data)
-					} else {
-						d = string(s.data)
+				var d string
+				if s.kind == "d" {
+					if sess, ok := h.sessions[s.shellSessionID]; ok {
+						sess.buffer.Write(s.data)
 					}
+					d = base64.StdEncoding.EncodeToString(s.data)
+				} else {
+					d = string(s.data)
+				}
 
-					if j, err := json.Marshal([]string{
-						s.kind,
-						d,
-					}); err == nil {
+				if j, err := json.Marshal([]string{
+					s.kind,
+					d,
+				}); err == nil {
+					for _, sub := range subs {
 						sub.reply(j)
 					}
 				}
+
 				if s.then != nil {
 					s.then()
 				}
@@ -158,11 +162,12 @@ func (h *shellHubType) register(sess *shellSession) {
 	hub.sessions[sess.id] = sess
 }
 
-func (h *shellHubType) subscribe(s subscription, cols, rows uint) {
+func (h *shellHubType) subscribe(s subscription, cols, rows uint) (scrollback []byte) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
-	if _, ok := h.sessions[s.shellSessionID]; !ok {
-		return
+	sess, ok := h.sessions[s.shellSessionID]
+	if !ok {
+		return nil
 	}
 
 	if subs, ok := h.subscriptions[s.shellSessionID]; ok {
@@ -178,6 +183,8 @@ func (h *shellHubType) subscribe(s subscription, cols, rows uint) {
 			pty.Setsize(sess.pty, uint16(rows), uint16(cols))
 		}
 	}
+
+	return sess.buffer.Bytes()
 }
 
 func (h *shellHubType) unsubscribe(shellSessionID, subscriptionID string) {

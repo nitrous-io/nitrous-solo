@@ -39,12 +39,13 @@ func ShellStartAndAttach(cmd string, args, env []string, wd, runAs string, cols,
 	return
 }
 
-func ShellAttach(shellSessionID string, cols, rows uint, reply func([]byte)) (subscriptionID string) {
+func ShellAttach(shellSessionID string, cols, rows uint, reply func([]byte)) (subscriptionID string, scrollback []byte) {
 	subscriptionID = uuid.NewV4().String()
+	scrollback = []byte("nitrous@solo-dev:~$ ")
 
 	ShellAttachCalls.Add(
 		List{shellSessionID, cols, rows, reply},
-		List{subscriptionID},
+		List{subscriptionID, scrollback},
 		nil,
 	)
 	return

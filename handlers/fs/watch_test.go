@@ -185,8 +185,8 @@ var _ = Describe("fs", func() {
 
 				j = parseResponseJSON(res)
 				Expect(j["id"]).To(Equal(watchID))
-				Expect(j["path"]).To(Equal(filepath.Join(testDir, "CHANGELOG.md")))
 				Expect(j["evt"]).To(Equal("created"))
+				Expect(j["path"]).To(Equal(filepath.Join(testDir, "CHANGELOG.md")))
 
 				// Delete a file.
 				err = os.Remove(filepath.Join(testDir, "README.md"))
@@ -199,8 +199,8 @@ var _ = Describe("fs", func() {
 
 				j = parseResponseJSON(res)
 				Expect(j["id"]).To(Equal(watchID))
-				Expect(j["path"]).To(Equal(filepath.Join(testDir, "README.md")))
 				Expect(j["evt"]).To(Equal("removed"))
+				Expect(j["path"]).To(Equal(filepath.Join(testDir, "README.md")))
 
 				// Rename a file - this will trigger a rename and a create event, in
 				// any order.

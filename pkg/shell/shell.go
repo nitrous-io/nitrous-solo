@@ -9,14 +9,14 @@ func StartAndAttach(cmd string, args, env []string, wd, runAs string, cols, rows
 	hub.register(sess)
 
 	shellSessionID = sess.id
-	subscriptionID = Attach(shellSessionID, cols, rows, reply)
+	subscriptionID, _ = Attach(shellSessionID, cols, rows, reply)
 	return subscriptionID, shellSessionID, nil
 }
 
-func Attach(shellSessionID string, cols, rows uint, reply func([]byte)) (subscriptionID string) {
+func Attach(shellSessionID string, cols, rows uint, reply func([]byte)) (subscriptionID string, scrollback []byte) {
 	sub := newSubscription(shellSessionID, reply)
-	hub.subscribe(sub, cols, rows)
-	return sub.id
+	scrollback = hub.subscribe(sub, cols, rows)
+	return sub.id, scrollback
 }
 
 func Detach(shellSessionID, subscriptionID string) {
