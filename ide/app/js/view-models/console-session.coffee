@@ -3,3 +3,6 @@ App.ConsoleSession = Em.Object.extend
   focused: false
   title: null
   terminal: null
+
+  subscriptionID: null
+  shellSessionID: null
