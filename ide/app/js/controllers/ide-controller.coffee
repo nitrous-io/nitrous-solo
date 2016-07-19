@@ -32,16 +32,16 @@ App.IdeController = Em.ObjectController.extend
   ideSocketsNotReady: Em.computed.not 'ideSocketsReady'
 
   initialize: ->
+    if App.localStorage.get('token')
+      @set 'socket', socket = App.Socket.create()
+      socket.connect()
+
     router = App.get 'router'
     router.get('ideLayoutController').initialize()
     router.get('ideMainMenuController').initialize()
     router.get('ideSidebarController').initialize()
     router.get('ideEditorController').initialize()
     router.get('ideConsoleController').initialize()
-
-    if App.localStorage.get('token')
-      @set 'socket', socket = App.Socket.create()
-      socket.connect()
 
     #pingerSocket = App.PingerSocket.create
     #  hostId: container.get('host_id')
