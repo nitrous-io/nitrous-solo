@@ -3,6 +3,8 @@ require('../lib/codemirror')
 DEFAULT_FONT_SIZE = 14
 
 App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
+  needs: ['ide']
+
   content: null
   modelClass: App.Document
   rootPane: null
@@ -117,7 +119,7 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
         sidebar.refreshTextFileContent path
 
   saveDocument: (doc) ->
-    return unless @get 'socketReady'
+    return unless socket = @get('controllers.ide.socket')
     return if doc.get('isImageFile')
 
     if path = doc.get 'path'
@@ -126,8 +128,7 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
       if @get 'removeTrailingWhitespaceOnSave'
         doc.set 'removeTrailingWhitespaceTrigger', true
 
-      socket = @get 'socket'
-      socket.writeFile path.get('absolutePath'), doc.get('content'), (err, absolutePath) =>
+      socket.writeFile path.get('absolutePath'), true, doc.get('content'), (err, absolutePath) =>
         path.decrementProperty 'loadCount'
         doc.setProperties
           readOnly: false
@@ -158,7 +159,7 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
     doc.set 'readOnly', true
 
     socket = @get 'socket'
-    socket.writeNewFile absolutePath, docContent, _.bind(@didWriteNewFileContent, this)
+    socket.writeFile absolutePath, false, docContent, _.bind(@didWriteNewFileContent, this)
 
     @trackActivity()
 

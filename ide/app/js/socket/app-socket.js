@@ -78,10 +78,23 @@ App.Socket = Em.Object.extend(Em.Evented, {
   unwatchFile(path) {
   },
 
-  writeFile(path, content, cb) {
-  },
+  writeFile(path, overwrite, content, cb) {
+    this.conn.send('fs.write', JSON.stringify({
+      path,
+      overwrite,
+      content: btoa(encodeUTF8(content))
+    }), function(magName, data, done) {
+      let res;
+      try {
+        res = JSON.parse(data);
+      } catch(err) {
+        done();
+        return;
+      }
 
-  writeNewFile(path, content, cb) {
+      cb(res.error, path);
+      done();
+    });
   },
 
   makeDirectory(path, cb) {
@@ -248,5 +261,21 @@ App.Socket = Em.Object.extend(Em.Evented, {
       cb(list);
       done();
     });
-  }
+  },
 });
+
+function encodeUTF8(s) {
+  try {
+    return unescape(encodeURIComponent(s));
+  } catch(err) {
+    return s;
+  }
+}
+
+function decodeUTF8(s) {
+  try {
+    return decodeURIComponent(escape(s));
+  } catch(err) {
+    return s;
+  }
+}
