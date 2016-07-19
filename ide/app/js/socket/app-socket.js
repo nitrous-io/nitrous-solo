@@ -132,6 +132,27 @@ App.Socket = Em.Object.extend(Em.Evented, {
   },
 
   deleteDir(path, cb) {
+    // prevent accidental deletion of sensitive paths
+    if (!path || path === "/" || path.match(/^\/(home|Users)(\/[^\/]+)?\/?$/) || path.match(/^\/root\/?$/)) {
+      cb(`Cowardly refusing to delete "${path}".`)
+      return;
+    }
+
+    this.conn.send('sh.run', JSON.stringify({
+      cmd: "rm",
+      args: ["-r", path]
+    }), function(magName, data, done) {
+      let res;
+      try {
+        res = JSON.parse(data);
+      } catch(err) {
+        done();
+        return;
+      }
+
+      cb(res.error);
+      done();
+    });
   },
 
   rename(path, newPath, cb) {
