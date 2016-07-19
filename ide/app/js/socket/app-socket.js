@@ -108,6 +108,24 @@ App.Socket = Em.Object.extend(Em.Evented, {
   },
 
   makeDirectory(path, cb) {
+    this.conn.send('sh.run', JSON.stringify({
+      cmd: 'mkdir',
+      args: [
+        '-m', '0755',
+        '-p', path
+      ]
+    }), function(magName, data, done) {
+      let res;
+      try {
+        res = JSON.parse(data);
+      } catch(err) {
+        done();
+        return
+      }
+
+      cb(res.error);
+      done();
+    });
   },
 
   deleteFile(path, cb) {
