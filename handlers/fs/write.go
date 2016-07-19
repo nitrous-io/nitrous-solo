@@ -33,8 +33,9 @@ func Write(c *ws.Context) {
 	}
 
 	var j struct {
-		Path    string `json:"path"`
-		Content string `json:"content"`
+		Path      string `json:"path"`
+		Content   string `json:"content"`
+		Overwrite bool   `json:"overwrite"`
 	}
 
 	if err := json.Unmarshal(data, &j); err != nil {
@@ -94,6 +95,11 @@ func Write(c *ws.Context) {
 			return
 		}
 		ff.Close()
+
+		if !j.Overwrite {
+			ReplyJSON(H{"error": "file_exists_at_path"}, reply)
+			return
+		}
 	}
 
 	content, err := base64.StdEncoding.DecodeString(j.Content)

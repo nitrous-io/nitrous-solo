@@ -63,9 +63,13 @@ var _ = Describe("fs.Write", func() {
 		os.RemoveAll(dir)
 	})
 
-	It("writes the content to a file", func() {
+	doWrite := func(pathToWrite string, overwrite bool) {
 		fs.Write(&ws.Context{
-			Data:  EncodeJSON(H{"path": pathToWrite, "content": base64.StdEncoding.EncodeToString([]byte("hello world"))}),
+			Data: EncodeJSON(H{
+				"path":      pathToWrite,
+				"content":   base64.StdEncoding.EncodeToString([]byte("hello world")),
+				"overwrite": overwrite,
+			}),
 			Reply: cb,
 			Meta: map[string]interface{}{
 				"login": "foo",
@@ -73,7 +77,10 @@ var _ = Describe("fs.Write", func() {
 			},
 			Done: Noop,
 		})
+	}
 
+	It("writes the content to a file", func() {
+		doWrite(pathToWrite, false)
 		Expect(res).NotTo(BeNil())
 
 		j := parseResponseJSON()
@@ -98,19 +105,25 @@ var _ = Describe("fs.Write", func() {
 		})
 
 		It("follows the symlink to write to the actual file", func() {
-			fs.Write(&ws.Context{
-				Data:  EncodeJSON(H{"path": pathToWrite, "content": base64.StdEncoding.EncodeToString([]byte("hello world"))}),
-				Reply: cb,
-				Meta: map[string]interface{}{
-					"login": "foo",
-					"user":  runAs,
-				},
-				Done: Noop,
-			})
+			doWrite(pathToWrite, false)
 			Expect(res).NotTo(BeNil())
 
 			j := parseResponseJSON()
 			Expect(j["error"]).To(Equal("invalid_user"))
+		})
+	})
+
+	Context("when the file path is not absolute", func() {
+		BeforeEach(func() {
+			pathToWrite = "bar.txt"
+		})
+
+		It("returns an error", func() {
+			doWrite(pathToWrite, false)
+			Expect(res).NotTo(BeNil())
+
+			j := parseResponseJSON()
+			Expect(j["error"]).To(Equal("path_is_not_absolute"))
 		})
 	})
 
@@ -119,96 +132,9 @@ var _ = Describe("fs.Write", func() {
 			Expect(ioutil.WriteFile(pathToWrite, []byte(`old content`), 0644)).To(BeNil())
 		})
 
-		It("overwrites the file", func() {
-			fs.Write(&ws.Context{
-				Data:  EncodeJSON(H{"path": pathToWrite, "content": base64.StdEncoding.EncodeToString([]byte("hello world"))}),
-				Reply: cb,
-				Meta: map[string]interface{}{
-					"login": "foo",
-					"user":  runAs,
-				},
-				Done: Noop,
-			})
-
-			j := parseResponseJSON()
-			Expect(j["written"]).To(BeTrue())
-
-			content, err := ioutil.ReadFile(pathToWrite)
-			Expect(err).To(BeNil())
-
-			Expect(content).To(Equal([]byte(`hello world`)))
-		})
-
-		Context("when the user does not have the permission to write to the given path", func() {
-			BeforeEach(func() {
-				Expect(os.Chmod(pathToWrite, 0400)).To(BeNil())
-			})
-
-			It("returns an error", func() {
-				fs.Write(&ws.Context{
-					Data:  EncodeJSON(H{"path": pathToWrite, "content": base64.StdEncoding.EncodeToString([]byte("hello world"))}),
-					Reply: cb,
-					Meta: map[string]interface{}{
-						"login": "foo",
-						"user":  runAs,
-					},
-					Done: Noop,
-				})
-
-				Expect(res).NotTo(BeNil())
-
-				j := parseResponseJSON()
-				Expect(j["error"]).To(Equal("permission_denied"))
-
-				content, err := ioutil.ReadFile(pathToWrite)
-				Expect(err).To(BeNil())
-
-				Expect(content).To(Equal([]byte(`old content`)))
-			})
-		})
-
-		Context("when the file is a directory", func() {
-			BeforeEach(func() {
-				pathToWrite = filepath.Join(dir, "foo")
-				Expect(os.Mkdir(pathToWrite, 0644)).To(BeNil())
-			})
-
-			It("returns an error", func() {
-				fs.Write(&ws.Context{
-					Data:  EncodeJSON(H{"path": pathToWrite, "content": base64.StdEncoding.EncodeToString([]byte("hello world"))}),
-					Reply: cb,
-					Meta: map[string]interface{}{
-						"login": "foo",
-						"user":  runAs,
-					},
-					Done: Noop,
-				})
-
-				Expect(res).NotTo(BeNil())
-
-				j := parseResponseJSON()
-				Expect(j["error"]).To(Equal("path_is_directory"))
-			})
-		})
-
-		Context("when the file is a symlink", func() {
-			var symlinkPath string
-
-			BeforeEach(func() {
-				symlinkPath = filepath.Join(dir, "symlink.txt")
-				Expect(os.Symlink(pathToWrite, symlinkPath)).To(BeNil())
-			})
-
-			It("writes to the actual file to which the symlink is pointing", func() {
-				fs.Write(&ws.Context{
-					Data:  EncodeJSON(H{"path": symlinkPath, "content": base64.StdEncoding.EncodeToString([]byte("hello world"))}),
-					Reply: cb,
-					Meta: map[string]interface{}{
-						"login": "foo",
-						"user":  runAs,
-					},
-					Done: Noop,
-				})
+		Context("when overwrite param is true", func() {
+			It("overwrites the file", func() {
+				doWrite(pathToWrite, true)
 				Expect(res).NotTo(BeNil())
 
 				j := parseResponseJSON()
@@ -220,54 +146,168 @@ var _ = Describe("fs.Write", func() {
 				Expect(content).To(Equal([]byte(`hello world`)))
 			})
 
-			Context("when the symlink is broken", func() {
+			Context("when the user does not have the permission to write to the given path", func() {
 				BeforeEach(func() {
-					os.Remove(symlinkPath)
-					brokenSymlinkPath := filepath.Join(dir, "broken.txt")
-					Expect(os.Symlink(brokenSymlinkPath, symlinkPath)).To(BeNil())
-					Expect(os.Symlink(symlinkPath, brokenSymlinkPath)).To(BeNil())
+					Expect(os.Chmod(pathToWrite, 0400)).To(BeNil())
 				})
 
 				It("returns an error", func() {
-					fs.Write(&ws.Context{
-						Data:  EncodeJSON(H{"path": symlinkPath, "content": base64.StdEncoding.EncodeToString([]byte("hello world"))}),
-						Reply: cb,
-						Meta: map[string]interface{}{
-							"login": "foo",
-							"user":  runAs,
-						},
-						Done: Noop,
-					})
+					doWrite(pathToWrite, true)
 					Expect(res).NotTo(BeNil())
 
 					j := parseResponseJSON()
-					Expect(j["error"]).To(Equal("symlink_too_deep"))
+					Expect(j["error"]).To(Equal("permission_denied"))
+
+					content, err := ioutil.ReadFile(pathToWrite)
+					Expect(err).To(BeNil())
+
+					Expect(content).To(Equal([]byte(`old content`)))
+				})
+			})
+
+			Context("when the file is a directory", func() {
+				BeforeEach(func() {
+					pathToWrite = filepath.Join(dir, "foo")
+					Expect(os.Mkdir(pathToWrite, 0644)).To(BeNil())
+				})
+
+				It("returns an error", func() {
+					doWrite(pathToWrite, true)
+					Expect(res).NotTo(BeNil())
+
+					j := parseResponseJSON()
+					Expect(j["error"]).To(Equal("path_is_directory"))
+				})
+			})
+
+			Context("when the file is a symlink", func() {
+				var symlinkPath string
+
+				BeforeEach(func() {
+					symlinkPath = filepath.Join(dir, "symlink.txt")
+					Expect(os.Symlink(pathToWrite, symlinkPath)).To(BeNil())
+				})
+
+				It("writes to the actual file to which the symlink is pointing", func() {
+					doWrite(symlinkPath, true)
+					Expect(res).NotTo(BeNil())
+
+					j := parseResponseJSON()
+					Expect(j["written"]).To(BeTrue())
+
+					content, err := ioutil.ReadFile(pathToWrite)
+					Expect(err).To(BeNil())
+
+					Expect(content).To(Equal([]byte(`hello world`)))
+				})
+
+				Context("when the symlink is broken", func() {
+					BeforeEach(func() {
+						os.Remove(symlinkPath)
+						brokenSymlinkPath := filepath.Join(dir, "broken.txt")
+						Expect(os.Symlink(brokenSymlinkPath, symlinkPath)).To(BeNil())
+						Expect(os.Symlink(symlinkPath, brokenSymlinkPath)).To(BeNil())
+					})
+
+					It("returns an error", func() {
+						doWrite(symlinkPath, true)
+						Expect(res).NotTo(BeNil())
+
+						j := parseResponseJSON()
+						Expect(j["error"]).To(Equal("symlink_too_deep"))
+					})
 				})
 			})
 		})
 
-		Context("when the file path is not absolute", func() {
-			BeforeEach(func() {
-				pathToWrite = "bar.txt"
-			})
-
+		Context("when the overwrite param is false", func() {
 			It("returns an error", func() {
-				fs.Write(&ws.Context{
-					Data:  EncodeJSON(H{"path": pathToWrite, "content": base64.StdEncoding.EncodeToString([]byte("hello world"))}),
-					Reply: cb,
-					Meta: map[string]interface{}{
-						"login": "foo",
-						"user":  runAs,
-					},
-					Done: Noop,
-				})
-
+				doWrite(pathToWrite, false)
 				Expect(res).NotTo(BeNil())
 
-				j := parseResponseJSON()
-				Expect(j["error"]).To(Equal("path_is_not_absolute"))
+				Expect(res).To(MatchJSON(EncodeJSON(H{
+					"error": "file_exists_at_path",
+				})))
+
+				content, err := ioutil.ReadFile(pathToWrite)
+				Expect(err).To(BeNil())
+
+				Expect(content).NotTo(Equal([]byte(`hello world`)))
+			})
+
+			Context("when the user does not have the permission to write to the given path", func() {
+				BeforeEach(func() {
+					Expect(os.Chmod(pathToWrite, 0400)).To(BeNil())
+				})
+
+				It("returns an error", func() {
+					doWrite(pathToWrite, false)
+					Expect(res).NotTo(BeNil())
+
+					j := parseResponseJSON()
+					Expect(j["error"]).To(Equal("permission_denied"))
+
+					content, err := ioutil.ReadFile(pathToWrite)
+					Expect(err).To(BeNil())
+
+					Expect(content).To(Equal([]byte(`old content`)))
+				})
+			})
+
+			Context("when the file is a directory", func() {
+				BeforeEach(func() {
+					pathToWrite = filepath.Join(dir, "foo")
+					Expect(os.Mkdir(pathToWrite, 0644)).To(BeNil())
+				})
+
+				It("returns an error", func() {
+					doWrite(pathToWrite, false)
+					Expect(res).NotTo(BeNil())
+
+					j := parseResponseJSON()
+					Expect(j["error"]).To(Equal("path_is_directory"))
+				})
+			})
+
+			Context("when the file is a symlink", func() {
+				var symlinkPath string
+
+				BeforeEach(func() {
+					symlinkPath = filepath.Join(dir, "symlink.txt")
+					Expect(os.Symlink(pathToWrite, symlinkPath)).To(BeNil())
+				})
+
+				It("returns an error if symlink points to a file", func() {
+					doWrite(symlinkPath, false)
+					Expect(res).NotTo(BeNil())
+
+					Expect(res).To(MatchJSON(EncodeJSON(H{
+						"error": "file_exists_at_path",
+					})))
+
+					content, err := ioutil.ReadFile(pathToWrite)
+					Expect(err).To(BeNil())
+
+					Expect(content).NotTo(Equal([]byte(`hello world`)))
+				})
+
+				Context("when the symlink is broken", func() {
+					BeforeEach(func() {
+						os.Remove(symlinkPath)
+						brokenSymlinkPath := filepath.Join(dir, "broken.txt")
+						Expect(os.Symlink(brokenSymlinkPath, symlinkPath)).To(BeNil())
+						Expect(os.Symlink(symlinkPath, brokenSymlinkPath)).To(BeNil())
+					})
+
+					It("returns an error", func() {
+						doWrite(symlinkPath, false)
+						Expect(res).NotTo(BeNil())
+
+						j := parseResponseJSON()
+						Expect(j["error"]).To(Equal("symlink_too_deep"))
+					})
+				})
 			})
 		})
-
 	})
 })
