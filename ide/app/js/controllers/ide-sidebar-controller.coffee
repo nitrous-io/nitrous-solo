@@ -335,7 +335,7 @@ App.IdeSidebarController = Em.ArrayController.extend
       if path.get 'directory'
         socket.makeDirectory absolutePath, callback
       else
-        socket.writeNewFile absolutePath, '', callback
+        socket.writeFile absolutePath, false, '', callback
 
     @get('controllers.ideEditor').trackActivity()
 
