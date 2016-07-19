@@ -174,5 +174,15 @@ App.Socket = Em.Object.extend(Em.Evented, {
       cols,
       rows
     ]));
+  },
+
+  shellKill(shellSessionID) {
+    if (!shellSessionID) {
+      return;
+    }
+
+    this.conn.send('sh.kill', JSON.stringify({
+      shell_session_id: shellSessionID
+    }));
   }
 });
