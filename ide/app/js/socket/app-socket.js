@@ -171,6 +171,21 @@ App.Socket = Em.Object.extend(Em.Evented, {
   },
 
   rename(path, newPath, cb) {
+    this.conn.send('sh.run', JSON.stringify({
+      cmd: "mv",
+      args: [path, newPath]
+    }), function(magName, data, done) {
+      let res;
+      try {
+        res = JSON.parse(data);
+      } catch(err) {
+        done();
+        return
+      }
+
+      cb(res.error);
+      done();
+    });
   },
 
   fileFind(term, root, cb) {
