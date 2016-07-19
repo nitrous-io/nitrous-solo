@@ -32,6 +32,10 @@ App.IdeController = Em.ObjectController.extend
   ideSocketsNotReady: Em.computed.not 'ideSocketsReady'
 
   initialize: ->
+    if App.localStorage.get('token')
+      @set 'socket', socket = App.Socket.create()
+      socket.connect()
+
     router = App.get 'router'
     router.get('ideLayoutController').initialize()
     router.get('ideMainMenuController').initialize()

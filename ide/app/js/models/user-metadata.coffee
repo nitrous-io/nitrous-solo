@@ -1,7 +1,6 @@
 App.UserMetadata = klass = Em.Object.extend
   root_path: null
   home_path: null
-  no_console: null
   readme_url: null
   readme_opened: null
   openTabs: null
