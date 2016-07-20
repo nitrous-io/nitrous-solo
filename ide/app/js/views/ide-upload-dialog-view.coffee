@@ -9,27 +9,20 @@ App.IdeUploadDialogView = App.IdeModalDialogView.extend
     div.draggable? || (div.ondragstart != undefined && div.ondrop != undefined)
   ).property()
 
-  uploadURI: (->
-    if container = App.get('container')
-      freighterdUrl = container.get 'freighterdUrl'
-      cid = container.get 'cid'
-      "https://#{freighterdUrl}/containers/#{cid}/upload"
-  ).property 'App.container'
-
   didInsertElement: ->
     @_super()
-    $files = @$ '.files'
     @$('.file-input').fileupload
-      url: @get('uploadURI')
+      url: "/files"
+      headers:
+        Authorization: "Token #{App.get('token')}"
       formData: =>
         [
-          { name: "token", value: @get('content.authToken') },
           { name: "location", value: @get('content.path.absolutePath') }
         ]
       dataType: 'json'
-      maxFileSize: 20 * 1000 * 1000
       singleFileUploads: true
-      sequentialUploads: true
+      sequentialUploads: false
+      limitConcurrentUploads: 5
       dropZone: @$('.drop-zone')
       add: _.bind(@didAddUpload, this)
       progress: _.bind(@progressDidChange, this)

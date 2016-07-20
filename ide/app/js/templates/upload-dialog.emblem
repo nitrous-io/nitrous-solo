@@ -5,6 +5,8 @@
     | &rdquo;
 
   .card-body
+    p To upload a folder containing multiple files and sub-folders, it is highly recommended that you create and upload a zip archive of the folder instead.
+
     if view.dragAndDropCapable
       view App.IdeUploadDialogDropZoneView
         p
