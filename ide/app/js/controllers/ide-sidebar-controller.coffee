@@ -129,10 +129,10 @@ App.IdeSidebarController = Em.ArrayController.extend
     if settings.error != false && typeof settings.error != 'function'
       settings.error = (err) ->
         message = switch err
-          when 'aio:file_too_large'
+          when 'file_too_big'
             'Cannot open the selected file because it is too large.'
           else
-            'Cannot open the selected file.'
+            "Cannot open the selected file - #{err.replace(/_/g, ' ')}."
         App.postError message
 
     if path.get 'directory'
@@ -226,25 +226,9 @@ App.IdeSidebarController = Em.ArrayController.extend
 
     socket.fetchFileContent path.get('absolutePath'), (err, contentType, content) =>
       path.decrementProperty 'loadCount'
-      if err
-        if err == 'aio:file_is_oversized_image'
-          #FIXME
-          container = App.get('container')
-          container.requestToken(['download']).then (tokenResp) =>
-            tab = editorController.createTab(
-              content: @downloadURL(container, path.get('absolutePath'), tokenResp.token)
-              path: path
-              active: settings.active
-              index: settings.index
-              selections: settings.selections
-              scrollPosition: settings.scrollPosition
-            , App.Image)
-            if settings.done
-              settings.done(tab)
-          return
 
-        if settings.error
-          settings.error(err)
+      if err && settings.error
+        settings.error(err)
         return
 
       tabClass = if contentType?.match /^image/ then App.Image else App.Document
