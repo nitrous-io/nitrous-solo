@@ -396,14 +396,9 @@ App.IdeSidebarController = Em.ArrayController.extend
   beginUpload: ->
     uploadDialog = @get 'uploadDialog'
     if uploadDialog && uploadDialog.get('length')
-      container = App.get('container')
-      container.requestToken(["upload"]).then (tokenResp) =>
-        uploadDialog.set 'uploading', true
-        uploadDialog.set 'authToken', tokenResp.token
-        uploadDialog.forEach (upload) ->
-          upload.submit()
-      , (jqxhr) ->
-          App.postError(jqxhr.responseJSON, 'Could not upload files, please try again.')
+      uploadDialog.set 'uploading', true
+      uploadDialog.forEach (upload) ->
+        upload.submit()
     else
       @set 'uploadDialog', null
 
