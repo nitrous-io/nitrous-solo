@@ -152,22 +152,14 @@ App.IdeSidebarController = Em.ArrayController.extend
 
   downloadPath: (path) ->
     if !path.get('loading')
-      container = App.get('container')
-      container.requestToken(["download"]).then (tokenResp) =>
-        downloadFrame = $('<iframe></iframe>')
-        downloadFrame.css 'display', 'none'
-        downloadFrame.attr 'src', @downloadURL(container, path.get('absolutePath'), tokenResp.token)
-        $('body').append downloadFrame
-        window.setTimeout(->
-          downloadFrame.remove()
-        , 5000)
-      , (jqxhr) ->
-        App.postError(jqxhr.responseJSON, 'Could not download file, please try again.')
-
-  downloadURL: (container, path, token) ->
-    freighterdUrl = container.get 'freighterdUrl'
-    cid = container.get 'cid'
-    "https://#{freighterdUrl}/containers/#{cid}/download?path=#{path}&token=#{token}"
+      url = "/files?token=#{App.get('token')}&path=#{path.get('absolutePath')}"
+      downloadFrame = $('<iframe></iframe>')
+      downloadFrame.css 'display', 'none'
+      downloadFrame.attr 'src', url
+      $('body').append downloadFrame
+      window.setTimeout(->
+        downloadFrame.remove()
+      , 5000)
 
   unwatchDir: (path) ->
     socket = @get 'socket'
