@@ -191,7 +191,40 @@ App.Socket = Em.Object.extend(Em.Evented, {
   fileFind(term, root, cb) {
   },
 
-  search(id, term, location, ignoreCase, useRegexp, filePattern, cb) {
+  search(term, path, ignoreCase, useRegexp, filePattern, cb) {
+    this.conn.send('fs.findInFiles', JSON.stringify({
+      term,
+      path,
+      ignore_case: ignoreCase,
+      use_regexp: useRegexp,
+      file_pattern: filePattern
+    }), function(magName, data, done) {
+      let res;
+      try {
+        res = JSON.parse(data);
+      } catch(err) {
+        done();
+        return;
+      }
+
+      try {
+        res.results = (res.results || []).map(function(result, i) {
+          return Object.assign({}, result, {
+            matches: result.matches.map(function(match, j) {
+              match.content = decodeUTF8(atob(match.content));
+              match.highlighted_content = decodeUTF8(atob(match.highlighted_content));
+              return match;
+            })
+          });
+        });
+      } catch(err) {
+        done();
+        return
+      }
+
+      cb(res);
+      done();
+    });
   },
 
   // start an interactive terminal
