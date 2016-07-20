@@ -67,6 +67,16 @@ App.Socket = Em.Object.extend(Em.Evented, {
         done();
         return;
       }
+      if (message.type === 'text') {
+        let content = message.content;
+        try {
+          content = atob(content);
+        } catch(err) {
+          done();
+          return;
+        }
+        message.content = decodeUTF8(content);
+      }
       cb(message.error, message.type, message.content);
       done();
     });
