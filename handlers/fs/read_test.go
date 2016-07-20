@@ -1,7 +1,7 @@
 package fs_test
 
 import (
-	"encoding/json"
+	"encoding/base64"
 	"path/filepath"
 
 	"github.com/nitrous-io/nitrous-solo/handlers/fs"
@@ -18,12 +18,6 @@ var _ = Describe("fs.Read", func() {
 		res = r
 	}
 
-	parseResponseJSON := func() (j map[string]interface{}) {
-		err := json.Unmarshal(res, &j)
-		Expect(err).To(BeNil())
-		return j
-	}
-
 	BeforeEach(func() {
 		res = nil
 	})
@@ -36,9 +30,11 @@ var _ = Describe("fs.Read", func() {
 				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
-			j := parseResponseJSON()
-			Expect(j["type"]).To(Equal("text"))
-			Expect(j["content"]).To(Equal("puts 'hello world'\n"))
+
+			Expect(res).To(MatchJSON(EncodeJSON(H{
+				"type":    "text",
+				"content": base64.StdEncoding.EncodeToString([]byte("puts 'hello world'\n")),
+			})))
 		})
 	})
 
@@ -50,9 +46,11 @@ var _ = Describe("fs.Read", func() {
 				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
-			j := parseResponseJSON()
-			Expect(j["type"]).To(Equal("text"))
-			Expect(j["content"]).To(Equal("source 'https://rubygems.org'\n"))
+
+			Expect(res).To(MatchJSON(EncodeJSON(H{
+				"type":    "text",
+				"content": base64.StdEncoding.EncodeToString([]byte("source 'https://rubygems.org'\n")),
+			})))
 		})
 	})
 
@@ -64,9 +62,11 @@ var _ = Describe("fs.Read", func() {
 				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
-			j := parseResponseJSON()
-			Expect(j["type"]).To(Equal("text"))
-			Expect(j["content"]).To(Equal(""))
+
+			Expect(res).To(MatchJSON(EncodeJSON(H{
+				"type":    "text",
+				"content": "",
+			})))
 		})
 	})
 
@@ -78,9 +78,11 @@ var _ = Describe("fs.Read", func() {
 				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
-			j := parseResponseJSON()
-			Expect(j["type"]).To(Equal("image"))
-			Expect(j["content"]).To(Equal("R0lGODlhAQABAIABAP///wAAACwAAAAAAQABAAACAkQBADs="))
+
+			Expect(res).To(MatchJSON(EncodeJSON(H{
+				"type":    "image",
+				"content": "R0lGODlhAQABAIABAP///wAAACwAAAAAAQABAAACAkQBADs=",
+			})))
 		})
 	})
 
@@ -92,9 +94,11 @@ var _ = Describe("fs.Read", func() {
 				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
-			j := parseResponseJSON()
-			Expect(j["type"]).To(Equal("text"))
-			Expect(j["content"]).To(Equal("hello world i am a text file with no extension\n"))
+
+			Expect(res).To(MatchJSON(EncodeJSON(H{
+				"type":    "text",
+				"content": base64.StdEncoding.EncodeToString([]byte("hello world i am a text file with no extension\n")),
+			})))
 		})
 	})
 
@@ -106,8 +110,10 @@ var _ = Describe("fs.Read", func() {
 				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
-			j := parseResponseJSON()
-			Expect(j["error"]).To(Equal("unrecognized_file_type"))
+
+			Expect(res).To(MatchJSON(EncodeJSON(H{
+				"error": "unrecognized_file_type",
+			})))
 		})
 	})
 
@@ -119,9 +125,11 @@ var _ = Describe("fs.Read", func() {
 				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
-			j := parseResponseJSON()
-			Expect(j["type"]).To(Equal("text"))
-			Expect(j["content"]).To(Equal("puts 'hello world'\n"))
+
+			Expect(res).To(MatchJSON(EncodeJSON(H{
+				"type":    "text",
+				"content": base64.StdEncoding.EncodeToString([]byte("puts 'hello world'\n")),
+			})))
 		})
 	})
 
@@ -133,8 +141,10 @@ var _ = Describe("fs.Read", func() {
 				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
-			j := parseResponseJSON()
-			Expect(j["error"]).To(Equal("invalid_path"))
+
+			Expect(res).To(MatchJSON(EncodeJSON(H{
+				"error": "invalid_path",
+			})))
 		})
 	})
 
@@ -146,8 +156,10 @@ var _ = Describe("fs.Read", func() {
 				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
-			j := parseResponseJSON()
-			Expect(j["error"]).To(Equal("invalid_path"))
+
+			Expect(res).To(MatchJSON(EncodeJSON(H{
+				"error": "invalid_path",
+			})))
 		})
 	})
 
@@ -159,8 +171,10 @@ var _ = Describe("fs.Read", func() {
 				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
-			j := parseResponseJSON()
-			Expect(j["error"]).To(Equal("path_not_file"))
+
+			Expect(res).To(MatchJSON(EncodeJSON(H{
+				"error": "path_not_file",
+			})))
 		})
 	})
 
@@ -172,8 +186,10 @@ var _ = Describe("fs.Read", func() {
 				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
-			j := parseResponseJSON()
-			Expect(j["error"]).To(Equal("path_not_file"))
+
+			Expect(res).To(MatchJSON(EncodeJSON(H{
+				"error": "path_not_file",
+			})))
 		})
 	})
 
@@ -185,8 +201,10 @@ var _ = Describe("fs.Read", func() {
 				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
-			j := parseResponseJSON()
-			Expect(j["error"]).To(Equal("invalid_path"))
+
+			Expect(res).To(MatchJSON(EncodeJSON(H{
+				"error": "invalid_path",
+			})))
 		})
 	})
 
@@ -198,8 +216,10 @@ var _ = Describe("fs.Read", func() {
 				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
-			j := parseResponseJSON()
-			Expect(j["error"]).To(Equal("symlink_too_deep"))
+
+			Expect(res).To(MatchJSON(EncodeJSON(H{
+				"error": "symlink_too_deep",
+			})))
 		})
 	})
 
@@ -216,8 +236,10 @@ var _ = Describe("fs.Read", func() {
 				Done:  Noop,
 			})
 			Expect(res).NotTo(BeNil())
-			j := parseResponseJSON()
-			Expect(j["error"]).To(Equal("file_too_big"))
+
+			Expect(res).To(MatchJSON(EncodeJSON(H{
+				"error": "file_too_big",
+			})))
 		})
 	})
 })

@@ -130,13 +130,5 @@ func Read(c *ws.Context) {
 		return
 	}
 
-	var content string
-	if fileType == "image" {
-		// encode in base64
-		content = base64.StdEncoding.EncodeToString(filedata)
-	} else {
-		content = string(filedata)
-	}
-
-	ReplyJSON(H{"type": fileType, "content": content}, reply)
+	ReplyJSON(H{"type": fileType, "content": base64.StdEncoding.EncodeToString(filedata)}, reply)
 }
