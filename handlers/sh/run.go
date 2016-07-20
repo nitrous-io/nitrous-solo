@@ -111,7 +111,9 @@ func Run(c *ws.Context) {
 	case <-done:
 		break
 	case <-time.After(timeout):
-		cmd.Process.Kill()
+		if cmd.Process != nil {
+			cmd.Process.Kill()
+		}
 		ReplyJSON(H{"error": "command_timeout"}, reply)
 		return
 	}
