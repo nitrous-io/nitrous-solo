@@ -3,6 +3,7 @@ import Socket from './socket';
 App.Socket = Em.Object.extend(Em.Evented, {
   started: false,
   startedFirstTime: false,
+  watchList: new Map(),
 
   init() {
     const token = App.localStorage.get('token');
@@ -40,6 +41,27 @@ App.Socket = Em.Object.extend(Em.Evented, {
   },
 
   didReceiveMessage(msgName, msgId, data) {
+    let message = null;
+    try {
+      message = JSON.parse(data);
+    } catch(err) {
+      console.log("error in didReceiveMessage:"+err)
+      return;
+    }
+    if (message.evt) {
+      // if folder get deleted via cmd or ide sidebar, we remove it from watchList
+      if (message.evt === 'stopped') {
+        let watchList = this.get('watchList');
+        watchList.forEach((value, key) => {
+          if (value === message.id) {
+            watchList.delete(key);
+          }
+        });
+        this.set('watchList', watchList);
+      }
+
+      this.trigger(msgName, message);
+    }
   },
 
   fetchFileList(path, cb) {
@@ -82,7 +104,29 @@ App.Socket = Em.Object.extend(Em.Evented, {
     });
   },
 
+  watchDir(path, cb) {
+    this.conn.send('fs.watch', JSON.stringify({ path }), (msgName, data, done) => {
+      let message = null;
+      try {
+        message = JSON.parse(data);
+      } catch(err) {
+        done();
+        return;
+      }
+      let watchList = this.get('watchList');
+      watchList.set(path, message.id);
+      this.set('watchList', watchList);
+      done();
+    });
+  },
+
   unwatchDir(path) {
+    const id = this.get('watchList').get(path);
+    if (id) {
+      this.conn.send('fs.unwatch', JSON.stringify({ id }), (msgName, data, done) => {
+        done();
+      });
+    }
   },
 
   unwatchFile(path) {
@@ -164,7 +208,6 @@ App.Socket = Em.Object.extend(Em.Evented, {
         done();
         return;
       }
-
       cb(res.error);
       done();
     });
