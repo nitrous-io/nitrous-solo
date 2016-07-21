@@ -37,16 +37,19 @@ App.IdeSidebarController = Em.ArrayController.extend
     @set 'currentlyDraggedPath', null
     @set 'currentDroppable', null
     if socket = @get 'socket'
-      socket.off 'dirChanged.output'
+      socket.off 'fs.watch'
 
-  onDirChanged: (error, absolutePathString) ->
-    this.refreshPath absolutePathString
+  onDirChanged: (data) ->
+    if data.path
+      dirPath = App.Path.create absolutePath: data.path, directory: true
+      parentPath = @findParentPath(dirPath)
+      this.refreshPath parentPath.absolutePath
 
   socketDidStartForTheFirstTime: (->
     if @get('socket.startedFirstTime') && @get('socketReady')
       Em.run.next =>
         socket = @get 'socket'
-        socket.on 'dirChanged.output', _.bind(@onDirChanged, this)
+        socket.on 'fs.watch', _.bind(@onDirChanged, this)
         this.openPath @get('rootPath')
         unless App.get('userMetadata').readme_opened
           this.openRepoReadme()
@@ -139,6 +142,7 @@ App.IdeSidebarController = Em.ArrayController.extend
       path.set 'expanded', !path.get('expanded')
       if path.get 'expanded'
         this.fetchFileList path
+        this.watchDir path
       else
         this.unwatchDir path
     else
@@ -169,6 +173,10 @@ App.IdeSidebarController = Em.ArrayController.extend
     freighterdUrl = container.get 'freighterdUrl'
     cid = container.get 'cid'
     "https://#{freighterdUrl}/containers/#{cid}/download?path=#{path}&token=#{token}"
+
+  watchDir: (path) ->
+    socket = @get 'socket'
+    socket.watchDir path.get('absolutePath')
 
   unwatchDir: (path) ->
     socket = @get 'socket'
