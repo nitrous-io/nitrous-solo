@@ -13,9 +13,7 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
-const (
-	CurrentUserDataKey = "current_user_data"
-)
+const CurrentUserDataKey = "current_user_data"
 
 func InternalServerError(c *gin.Context, err error) {
 	var (
@@ -64,7 +62,6 @@ func GetUserDataByToken(tok string) *data.UserData {
 	if !ok {
 		return nil
 	}
-
 	return ud
 }
 
