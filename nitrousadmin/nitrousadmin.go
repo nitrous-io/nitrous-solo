@@ -124,6 +124,7 @@ func addUser(params []string) {
 		Login: login,
 		User:  systemUser,
 	}
+	ud.SetDefaultSettings()
 	ud.SetPassword(password)
 
 	update := false
