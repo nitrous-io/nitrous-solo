@@ -1,8 +1,7 @@
 package files
 
 import (
-	"archive/tar"
-	"compress/gzip"
+	"archive/zip"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -162,7 +161,7 @@ func Download(c *gin.Context) {
 		targetPath = target.Name()
 
 		c.Writer.Header().Set("Content-Transfer-Encoding", "binary")
-		c.Writer.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(path)+".tar.gz")
+		c.Writer.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(path)+".zip")
 
 		c.File(targetPath)
 	} else {
@@ -205,22 +204,16 @@ func bundle(basePath string, target *os.File) error {
 		return err
 	}
 
-	gw := gzip.NewWriter(target)
+	zw := zip.NewWriter(target)
 	defer func() {
-		gw.Flush()
-		gw.Close()
-	}()
-
-	tw := tar.NewWriter(gw)
-	defer func() {
-		tw.Flush()
-		tw.Close()
+		zw.Flush()
+		zw.Close()
 	}()
 
 	for i, fi := range list {
 		absPath := paths[i]
 
-		hdr, err := tar.FileInfoHeader(fi, fi.Name())
+		hdr, err := zip.FileInfoHeader(fi)
 		if err != nil {
 			return err
 		}
@@ -229,9 +222,10 @@ func bundle(basePath string, target *os.File) error {
 		if err != nil {
 			return err
 		}
-
 		hdr.Name = relPath
-		if err := tw.WriteHeader(hdr); err != nil {
+
+		w, err := zw.CreateHeader(hdr)
+		if err != nil {
 			return err
 		}
 
@@ -241,9 +235,10 @@ func bundle(basePath string, target *os.File) error {
 		}
 		defer f.Close()
 
-		if _, err := io.Copy(tw, f); err != nil {
+		if _, err := io.Copy(w, f); err != nil {
 			return err
 		}
+		f.Close()
 	}
 
 	return nil

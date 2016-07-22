@@ -1,9 +1,8 @@
 package files_test
 
 import (
-	"archive/tar"
+	"archive/zip"
 	"bytes"
-	"compress/gzip"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -205,9 +204,9 @@ var _ = Describe("files", func() {
 				Expect(res.StatusCode).To(Equal(422))
 				Expect(b.String()).To(MatchJSON(`{
 					"error": "invalid_params",
-						"errors": {
-							"location": "is required"
-						}
+					"errors": {
+						"location": "is required"
+					}
 				}`))
 			})
 		})
@@ -364,8 +363,8 @@ var _ = Describe("files", func() {
 
 		Context("the path is directory", func() {
 			BeforeEach(func() {
-				otherFile := filepath.Join(dir, "world.txt")
-				Expect(ioutil.WriteFile(otherFile, []byte("world"), 0644)).To(BeNil())
+				otherFile := filepath.Join(dir, "world.sh")
+				Expect(ioutil.WriteFile(otherFile, []byte("#!/bin/sh\necho 'hello world'\n"), 0755)).To(BeNil())
 
 				otherDir := filepath.Join(dir, "foo")
 				Expect(os.Mkdir(otherDir, 0777)).To(BeNil())
@@ -374,39 +373,47 @@ var _ = Describe("files", func() {
 				Expect(ioutil.WriteFile(fileInDir, []byte("qux"), 0644)).To(BeNil())
 			})
 
-			It("returns 200 OK with tar-gzip file", func() {
+			It("returns 200 OK with zip file", func() {
 				doRequest(dir)
 
 				Expect(res.StatusCode).To(Equal(http.StatusOK))
-				Expect(res.Header.Get("Content-Disposition")).To(Equal("attachment; filename=" + filepath.Base(dir) + ".tar.gz"))
-				Expect(res.Header.Get("Content-Type")).To(Equal("application/x-gzip"))
+				Expect(res.Header.Get("Content-Disposition")).To(Equal("attachment; filename=" + filepath.Base(dir) + ".zip"))
+				Expect(res.Header.Get("Content-Type")).To(Equal("application/zip"))
 				Expect(res.Header.Get("Content-Transfer-Encoding")).To(Equal("binary"))
 
-				gr, err := gzip.NewReader(res.Body)
+				b, err := ioutil.ReadAll(res.Body)
+				r := bytes.NewReader(b)
+
+				zr, err := zip.NewReader(r, int64(len(b)))
 				Expect(err).To(BeNil())
-				defer gr.Close()
 
-				tr := tar.NewReader(gr)
-				b := make([]byte, 10)
-
-				var files = []struct {
-					path    string
-					content []byte
+				var expectedFiles = map[string]struct {
+					body []byte
+					perm os.FileMode
 				}{
-					{"foo/bar.txt", []byte(`qux`)},
-					{"hello.txt", []byte(`hello`)},
-					{"world.txt", []byte(`world`)},
+					"foo/bar.txt": {[]byte(`qux`), 0644},
+					"hello.txt":   {[]byte(`hello`), 0644},
+					"world.sh":    {[]byte("#!/bin/sh\necho 'hello world'\n"), 0755},
 				}
 
-				for _, f := range files {
-					hdr, err := tr.Next()
+				for _, zf := range zr.File {
+					f, err := zf.Open()
+					defer f.Close()
 					Expect(err).To(BeNil())
-					Expect(hdr.Name).To(Equal(f.path))
 
-					n, err := tr.Read(b)
+					expectedFile, ok := expectedFiles[zf.Name]
+					Expect(ok).To(BeTrue())
+
+					Expect(zf.Mode().Perm()).To(Equal(expectedFile.perm))
+
+					fb, err := ioutil.ReadAll(f)
 					Expect(err).To(BeNil())
-					Expect(b[:n]).To(Equal(f.content))
+					Expect(fb).To(Equal(expectedFile.body))
+					delete(expectedFiles, zf.Name)
+					f.Close()
 				}
+
+				Expect(expectedFiles).To(HaveLen(0))
 			})
 		})
 
