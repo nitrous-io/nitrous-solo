@@ -1,3 +1,6 @@
+window.watchManager = require('../lib/watchmanager').default;
+Path = require('path')
+
 App.IdeSidebarController = Em.ArrayController.extend
   needs: ['ide', 'ideFindInProject', 'ideEditor']
 
@@ -36,21 +39,14 @@ App.IdeSidebarController = Em.ArrayController.extend
     @set 'uploadDialog', null
     @set 'currentlyDraggedPath', null
     @set 'currentDroppable', null
-    if socket = @get 'socket'
-      socket.off 'dirChanged.output'
-
-  onDirChanged: (error, absolutePathString) ->
-    this.refreshPath absolutePathString
 
   socketDidStartForTheFirstTime: (->
     if @get('socket.startedFirstTime') && @get('socketReady')
       Em.run.next =>
         socket = @get 'socket'
-        socket.on 'dirChanged.output', _.bind(@onDirChanged, this)
         this.openPath @get('rootPath')
         unless App.get('userMetadata').readme_opened
           this.openRepoReadme()
-
         @restoreOpenTabs()
   ).observes 'socket.startedFirstTime', 'socketReady'
 
@@ -136,11 +132,14 @@ App.IdeSidebarController = Em.ArrayController.extend
         App.postError message
 
     if path.get 'directory'
+      socket = @get 'socket'
       path.set 'expanded', !path.get('expanded')
+
       if path.get 'expanded'
-        this.fetchFileList path
+        @watchAndFetchRecursively(path)
       else
-        this.unwatchDir path
+        @unwatchRecursively(path)
+
     else
       editorController = @get('controllers.ideEditor')
       if doc = editorController.findProperty 'path', path
@@ -162,10 +161,6 @@ App.IdeSidebarController = Em.ArrayController.extend
         downloadFrame.remove()
       , 5000)
 
-  unwatchDir: (path) ->
-    socket = @get 'socket'
-    socket.unwatchDir path.get('absolutePath')
-
   reveal: (path) ->
     return unless path.get
     origPath = path
@@ -179,15 +174,17 @@ App.IdeSidebarController = Em.ArrayController.extend
     origPath.set 'selected', true
     @set 'currentlySelectedPath', origPath
 
-  fetchFileList: (path) ->
+  fetchFileList: (path, cb) ->
     socket = @get 'socket'
     path.incrementProperty 'loadCount'
     socket.fetchFileList path.get('absolutePath'), (err, content) ->
-      path.decrementProperty 'loadCount'
       if err
         path.set 'expanded', false
       else
         path.updateContent content
+        if typeof cb == 'function'
+          cb()
+      path.decrementProperty 'loadCount'
 
   # reloads document content of a tab with a given path from server
   # this is for operations where we modified content of the file on the server
@@ -370,7 +367,11 @@ App.IdeSidebarController = Em.ArrayController.extend
         else
           App.set 'flashMessage', { type: 'error', text: 'Rename failed.' }
       else
+        pathIsDir = path.get('directory')
+        @unwatchRecursively(path) if pathIsDir
         path.set 'absolutePath', newAbsolutePath
+        if pathIsDir && path.get('expanded')
+          @watchAndFetchRecursively(path)
 
       path.decrementProperty 'loadCount'
       path.set 'editable', false
@@ -422,6 +423,7 @@ App.IdeSidebarController = Em.ArrayController.extend
         path.set 'beingDeleted', false
         App.postError(err)
       else
+        @unwatchRecursively(path) # should not be necessary due to onStop, but just in case.
         path.set 'deleted', true
         if parentPath
           parentPath.get('content').removeObject path
@@ -448,10 +450,44 @@ App.IdeSidebarController = Em.ArrayController.extend
       file.hasRemoteClients
   ).property 'overrideActiveFilesPane', 'activeFilesMonitor.sortedFiles'
 
-  findParentPath: (path)->
+  findParentPath: (path) ->
     rootPath = @get 'rootPath'
     parentAbsolutePath = path.get 'parentAbsolutePath'
     return rootPath.findByRelativePath parentAbsolutePath
+
+  # recursively watch/fetch a folder, and all "expanded" sub-folders
+  watchAndFetchRecursively: (pathObj) ->
+    absPath = pathObj.get('absolutePath')
+    @fetchFileList pathObj, =>
+      watchManager.unlessWatching absPath, =>
+        onStart = (id) ->
+          watchManager.add(id, absPath)
+
+        onChange = (id, evt, path) =>
+          return if evt == "modified"
+          watchManager.debounce id, 100, =>
+            @refreshPath(Path.dirname(path))
+
+        onStop = (id) =>
+          @unwatchRecursively(watchManager.pathForID(id))
+
+        @get('socket').watch(absPath, onStart, onChange, onStop)
+
+      if content = pathObj.get('content')
+        for subpath in content
+          if subpath.get('directory') && subpath.get('expanded')
+            @watchAndFetchRecursively(subpath)
+
+  unwatchRecursively: (path) ->
+    if path instanceof App.Path
+      path = path.get('absolutePath')
+
+    watchManager.ifWatching path, =>
+      if ids = watchManager.idsForSubPaths(path)
+        socket = @get 'socket'
+        for id in ids
+          socket.unwatch(id)
+          watchManager.remove(id)
 
 App.IdeSidebarController.reopenClass
   REFRESH_DELAY: 200

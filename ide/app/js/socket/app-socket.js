@@ -82,11 +82,38 @@ App.Socket = Em.Object.extend(Em.Evented, {
     });
   },
 
-  unwatchDir(path) {
+  watch(path, onStart, onChange, onStop) {
+    this.conn.send('fs.watch', JSON.stringify({ path }), function(msgName, data, done) {
+      let message;
+      try {
+        message = JSON.parse(data);
+      } catch(err) {
+        done();
+        return;
+      }
+      switch (message.evt) {
+        case 'started':
+          onStart(message.id);
+          break;
+
+        case 'stopped':
+          done();
+          onStop(message.id);
+          break;
+
+        default:
+          onChange(message.id, message.evt, message.path);
+      }
+    });
   },
 
-  unwatchFile(path) {
+  unwatch(id) {
+    this.conn.send('fs.unwatch', JSON.stringify({ id }));
   },
+
+  watchFile() {},
+
+  unwatchFile() {},
 
   writeFile(path, overwrite, content, cb) {
     this.conn.send('fs.write', JSON.stringify({
