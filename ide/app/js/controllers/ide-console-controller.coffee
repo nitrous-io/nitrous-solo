@@ -21,7 +21,6 @@ App.IdeConsoleController = Em.ArrayController.extend App.IdeTabControllerMixin, 
     return unless socket = @get('controllers.ide.socket')
 
     restore = =>
-      console.log('fetching shell list')
       socket.shellList (list) =>
         if list.length == 0
           @set('minimized', true)
