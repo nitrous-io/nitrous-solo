@@ -36,7 +36,7 @@ window.TabWatcher = class @TabWatcher
         }
         changes.push change
 
-    @userMetadata.setMetadata({openTabs: changes}).fail =>
+    @userMetadata.setMetadata({openTabs: changes}).catch =>
       @scheduleSync(10000)
 
   @notifyOfChange: ->
