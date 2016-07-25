@@ -1,0 +1,11 @@
+h1 Nitrous Solo Login
+
+if errorMessage
+  p
+    = errorMessage
+
+Em.TextField value=login placeholder='IDE Username'
+Em.TextField value=password type='password' placeholder='Password'
+
+button click='submit' disabled=submitDisabled
+  | Submit
