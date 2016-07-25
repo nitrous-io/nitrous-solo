@@ -15,8 +15,7 @@
       unless App.chromeApp
         li.ui.dropdown.account-menu
           a href='#'
-            img.gravatar src={App.user.gravatar}
-            = App.user.username
+            = App.user.login
             .ui.dropdown-triangle
           ul.dropdown-menu.right
             li

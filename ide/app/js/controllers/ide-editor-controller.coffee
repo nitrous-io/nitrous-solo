@@ -46,7 +46,7 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
     editorPane = App.EditorPane.create(tabs: Em.A())
     @set 'rootPane', editorPane
     @set 'activePane', editorPane
-    @set 'tabWatcher', new TabWatcher(editorPane, App.get('userMetadata'))
+    @set 'tabWatcher', new TabWatcher(editorPane, App.get('user'))
 
     @useUserSettings()
 
@@ -70,19 +70,19 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
       @set 'goToLineDialog', null
 
   useUserSettings: ->
-    userSettings = App.get('userSettings') || {}
+    user = App.get('user') || {}
     _.each App.Editor.SETTINGS, (k) =>
-      setting = userSettings[k.underscore()]
+      setting = user[k.underscore()]
       if setting?
         @set(k, setting)
       @addObserver(k, this, 'updateUserSettings')
 
   updateUserSettings: ->
-    userSettings = App.get('userSettings')
-    if userSettings
+    user = App.get('user')
+    if user
       _.each App.Editor.SETTINGS, (k) =>
-        userSettings[k.underscore()] = @get(k)
-      userSettings.requestSave()
+        user[k.underscore()] = @get(k)
+      user.requestSave()
 
   removeTab: (tab, forceRemove=false) ->
     tab = @get 'activeTab' unless tab
@@ -154,7 +154,7 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
     docContent = doc.get 'content'
     # FIXME probably not the best way to scope to home path
     path = saveDialog.get 'path'
-    homePath = App.get('userMetadata').home_path
+    homePath = App.get('user').home_path
     absolutePath = "#{homePath}/#{path}"
     doc.set 'readOnly', true
 

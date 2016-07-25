@@ -91,7 +91,7 @@ App.IdeMainMenuView = Em.View.extend
 
   helpMenuItems: (->
     items = []
-    if App.get('userMetadata').readme_url
+    if App.get('user').readme_url
       items.push(
         menuItem 'View README', callback: (controller) ->
           controller.helpNitrousReadme()
