@@ -18,6 +18,7 @@ import (
 	"github.com/nitrous-io/nitrous-solo/pkg/token"
 	"github.com/nitrous-io/nitrous-solo/server"
 	. "github.com/nitrous-io/nitrous-solo/testhelper"
+	"github.com/nitrous-io/nitrous-solo/testhelper/sharedexamples"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -66,7 +67,7 @@ var _ = Describe("files", func() {
 		Expect(err).To(BeNil())
 		runUserGID = uint32(gid)
 
-		tok, err = token.GenerateTokenString("foobar")
+		tok, err = token.GenerateTokenString("foobar", token.LoginType)
 		Expect(err).To(BeNil())
 	})
 
@@ -270,49 +271,11 @@ var _ = Describe("files", func() {
 			})
 		})
 
-		Context("when token is missing", func() {
-			BeforeEach(func() {
-				headers = http.Header{}
-			})
-
-			It("returns 401 with invalid_token", func() {
-				doRequest(location, "files[]", "hello\nworld")
-
-				b := &bytes.Buffer{}
-				_, err = b.ReadFrom(res.Body)
-				Expect(err).To(BeNil())
-
-				Expect(res.StatusCode).To(Equal(http.StatusUnauthorized))
-				Expect(b.String()).To(MatchJSON(`{
-					"error": "invalid_token",
-					"error_description": "access token is required"
-				}`))
-			})
-		})
-
-		Context("when token is wrong", func() {
-			BeforeEach(func() {
-				tok, err = token.GenerateTokenString("foobarqux")
-				Expect(err).To(BeNil())
-
-				headers = http.Header{
-					"Authorization": {"Token " + tok},
-				}
-			})
-
-			It("returns 401 with invalid_token", func() {
-				doRequest(location, "files[]", "hello\nworld")
-
-				b := &bytes.Buffer{}
-				_, err = b.ReadFrom(res.Body)
-				Expect(err).To(BeNil())
-
-				Expect(res.StatusCode).To(Equal(http.StatusUnauthorized))
-				Expect(b.String()).To(MatchJSON(`{
-					"error": "invalid_token",
-					"error_description": "access token is invalid"
-				}`))
-			})
+		sharedexamples.ItRequiresAuthentication(func() (*data.UserData, *http.Header) {
+			return ud, &headers
+		}, func() *http.Response {
+			doRequest(location, "files[]", "hello\nworld")
+			return res
 		})
 	})
 
@@ -321,7 +284,6 @@ var _ = Describe("files", func() {
 			filePath string
 			dir      string
 			err      error
-			headers  http.Header
 		)
 
 		doRequest := func(path string) {
@@ -339,9 +301,8 @@ var _ = Describe("files", func() {
 			filePath = filepath.Join(dir, "hello.txt")
 			Expect(ioutil.WriteFile(filePath, []byte("hello"), 0644)).To(BeNil())
 
-			headers = http.Header{
-				"Authorization": {"Token " + tok},
-			}
+			tok, err = token.GenerateTokenString("foobar", token.TempType)
+			Expect(err).To(BeNil())
 		})
 
 		AfterEach(func() {
@@ -477,7 +438,7 @@ var _ = Describe("files", func() {
 
 		Context("when token is wrong", func() {
 			BeforeEach(func() {
-				tok, err = token.GenerateTokenString("foobarqux")
+				tok, err = token.GenerateTokenString("foobarqux", token.TempType)
 				Expect(err).To(BeNil())
 			})
 

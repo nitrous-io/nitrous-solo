@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/user"
 	"strconv"
+	"time"
 
 	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 	. "github.com/nitrous-io/nitrous-solo/testhelper"
@@ -48,10 +49,12 @@ var _ = Describe("sh", func() {
 		var err error
 		currUser, err = user.Current()
 		Expect(err).To(BeNil())
+		SetDefaultEventuallyTimeout(10 * time.Second)
 	})
 
 	AfterEach(func() {
 		executor = origExecutor
+		SetDefaultEventuallyTimeout(1 * time.Second)
 	})
 
 	Describe("Run", func() {

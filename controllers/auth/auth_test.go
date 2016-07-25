@@ -5,11 +5,14 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
+	"github.com/nitrous-io/nitrous-solo/controllers/auth"
 	"github.com/nitrous-io/nitrous-solo/data"
 	"github.com/nitrous-io/nitrous-solo/pkg/token"
 	"github.com/nitrous-io/nitrous-solo/server"
 	. "github.com/nitrous-io/nitrous-solo/testhelper"
+	"github.com/nitrous-io/nitrous-solo/testhelper/sharedexamples"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -21,6 +24,8 @@ func Test(t *testing.T) {
 
 var _ = Describe("auth", func() {
 	var (
+		ud *data.UserData
+
 		s   *httptest.Server
 		res *http.Response
 		err error
@@ -30,7 +35,7 @@ var _ = Describe("auth", func() {
 		s = httptest.NewServer(server.New(""))
 
 		data.D = data.Reset()
-		ud := &data.UserData{
+		ud = &data.UserData{
 			Login: "foobar",
 			User:  "nitrous",
 		}
@@ -112,7 +117,74 @@ var _ = Describe("auth", func() {
 				t, ok := j["token"].(string)
 				Expect(ok).To(BeTrue())
 				Expect(t).NotTo(BeEmpty())
-				Expect(token.ValidateTokenString(t)).To(Equal("foobar"))
+				Expect(token.ValidateTokenString(t, token.LoginType)).To(Equal("foobar"))
+			})
+		})
+	})
+
+	Describe("POST /token/temp", func() {
+		var (
+			tok                 string
+			headers             http.Header
+			params              url.Values
+			origTempTokenExpiry time.Duration
+		)
+
+		BeforeEach(func() {
+			tok, err = token.GenerateTokenString("foobar", token.LoginType)
+			Expect(err).To(BeNil())
+
+			headers = http.Header{
+				"Authorization": {"Token " + tok},
+			}
+
+			origTempTokenExpiry = auth.DefaultTemporaryTokenExpiry
+			auth.DefaultTemporaryTokenExpiry = 10 * time.Millisecond
+		})
+
+		AfterEach(func() {
+			auth.DefaultTemporaryTokenExpiry = origTempTokenExpiry
+		})
+
+		doRequest := func() {
+			res, err = MakeRequest("POST", s.URL+"/token/temp", params, headers, nil)
+			Expect(err).To(BeNil())
+		}
+
+		sharedexamples.ItRequiresAuthentication(func() (*data.UserData, *http.Header) {
+			return ud, &headers
+		}, func() *http.Response {
+			doRequest()
+			return res
+		})
+
+		Context("when vaild token is given", func() {
+			It("returns a valid temporary token", func() {
+				doRequest()
+				Expect(err).To(BeNil())
+
+				Expect(res.StatusCode).To(Equal(http.StatusOK))
+				j := ParseJSONBody(res.Body)
+				t, ok := j["token"].(string)
+				Expect(ok).To(BeTrue())
+				Expect(t).NotTo(BeEmpty())
+				Expect(token.ValidateTokenString(t, token.TempType)).To(Equal("foobar"))
+			})
+
+			It("the token expires after default expiry", func() {
+				doRequest()
+				Expect(err).To(BeNil())
+
+				Expect(res.StatusCode).To(Equal(http.StatusOK))
+				j := ParseJSONBody(res.Body)
+				t, ok := j["token"].(string)
+				Expect(ok).To(BeTrue())
+				Expect(t).NotTo(BeEmpty())
+				Expect(token.ValidateTokenString(t, token.TempType)).To(Equal("foobar"))
+
+				time.Sleep(10 * time.Millisecond)
+
+				Expect(token.ValidateTokenString(t, token.TempType)).To(BeEmpty())
 			})
 		})
 	})

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nitrous-io/nitrous-solo/controllers"
+	"github.com/nitrous-io/nitrous-solo/pkg/token"
 )
 
 var tokenAuthHeaderRe = regexp.MustCompile(`\A\s*Token\s+([\S]+)\s*\z`)
@@ -22,7 +23,7 @@ func VerifyToken(c *gin.Context) {
 		return
 	}
 
-	ud := controllers.GetUserDataByToken(match[1])
+	ud := controllers.GetUserDataByToken(match[1], token.LoginType)
 	if ud == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":             "invalid_token",

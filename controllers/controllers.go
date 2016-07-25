@@ -54,8 +54,8 @@ func InternalServerError(c *gin.Context, err error) {
 	c.JSON(http.StatusInternalServerError, j)
 }
 
-func GetUserDataByToken(tok string) *data.UserData {
-	login := token.ValidateTokenString(tok)
+func GetUserDataByToken(tok string, tokenType token.Type) *data.UserData {
+	login := token.ValidateTokenString(tok, tokenType)
 	if login == "" {
 		return nil
 	}

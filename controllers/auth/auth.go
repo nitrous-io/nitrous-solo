@@ -3,12 +3,15 @@ package auth
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	. "github.com/nitrous-io/nitrous-solo/controllers"
 	"github.com/nitrous-io/nitrous-solo/data"
 	"github.com/nitrous-io/nitrous-solo/pkg/token"
 )
+
+var DefaultTemporaryTokenExpiry = 30 * time.Second
 
 func CreateToken(c *gin.Context) {
 	login := strings.ToLower(c.PostForm("login"))
@@ -32,7 +35,21 @@ func CreateToken(c *gin.Context) {
 		return
 	}
 
-	t, err := token.GenerateTokenString(login)
+	t, err := token.GenerateTokenString(login, token.LoginType)
+	if err != nil {
+		InternalServerError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": t,
+	})
+}
+
+func CreateTemporaryToken(c *gin.Context) {
+	ud := CurrentUserData(c)
+
+	t, err := token.GenerateTokenStringWithExpiry(ud.Login, DefaultTemporaryTokenExpiry, token.TempType)
 	if err != nil {
 		InternalServerError(c, err)
 		return

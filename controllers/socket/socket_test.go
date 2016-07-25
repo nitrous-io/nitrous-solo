@@ -75,7 +75,7 @@ var _ = Describe("socket", func() {
 
 		Context("when valid token is given", func() {
 			BeforeEach(func() {
-				tok, err := token.GenerateTokenString("foobar")
+				tok, err := token.GenerateTokenString("foobar", token.TempType)
 				Expect(err).To(BeNil())
 
 				params = url.Values{
@@ -107,7 +107,7 @@ var _ = Describe("socket", func() {
 
 		Context("when token is not valid", func() {
 			BeforeEach(func() {
-				tok, err := token.GenerateTokenString("foo")
+				tok, err := token.GenerateTokenString("foo", token.TempType)
 				Expect(err).To(BeNil())
 
 				params = url.Values{

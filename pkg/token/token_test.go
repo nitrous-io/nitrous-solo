@@ -18,17 +18,17 @@ func Test(t *testing.T) {
 var _ = Describe("token", func() {
 	Describe("GenerateTokenString", func() {
 		It("generates unique tokens", func() {
-			t1, err := token.GenerateTokenString("foo")
+			t1, err := token.GenerateTokenString("foo", token.LoginType)
 			Expect(err).To(BeNil())
-			t2, err := token.GenerateTokenString("foo")
+			t2, err := token.GenerateTokenString("foo", token.LoginType)
 			Expect(err).To(BeNil())
-			t3, err := token.GenerateTokenString("foo")
+			t3, err := token.GenerateTokenString("foo", token.LoginType)
 			Expect(err).To(BeNil())
 			Expect(t1).NotTo(Equal(t2))
 			Expect(t1).NotTo(Equal(t3))
 			Expect(t2).NotTo(Equal(t3))
 
-			t4, err := token.GenerateTokenString("bar")
+			t4, err := token.GenerateTokenString("bar", token.TempType)
 			Expect(err).To(BeNil())
 			Expect(t1).NotTo(Equal(t4))
 		})
@@ -36,9 +36,9 @@ var _ = Describe("token", func() {
 
 	Describe("GenerateTokenStringWithExpiry", func() {
 		It("generates unique tokens with given expiry", func() {
-			t1, err := token.GenerateTokenStringWithExpiry("foo", 1*time.Second)
+			t1, err := token.GenerateTokenStringWithExpiry("foo", 1*time.Second, token.LoginType)
 			Expect(err).To(BeNil())
-			t2, err := token.GenerateTokenStringWithExpiry("foo", 1*time.Second)
+			t2, err := token.GenerateTokenStringWithExpiry("foo", 1*time.Second, token.LoginType)
 			Expect(err).To(BeNil())
 			Expect(t1).NotTo(Equal(t2))
 		})
@@ -47,22 +47,30 @@ var _ = Describe("token", func() {
 	Describe("ValidateTokenString", func() {
 		Context("when a given token is valid", func() {
 			It("returns login (username)", func() {
-				t1, err := token.GenerateTokenString("foo")
+				t1, err := token.GenerateTokenString("foo", token.LoginType)
 				Expect(err).To(BeNil())
-				t2, err := token.GenerateTokenString("bar")
+				t2, err := token.GenerateTokenString("bar", token.LoginType)
 				Expect(err).To(BeNil())
 
-				Expect(token.ValidateTokenString(t1)).To(Equal("foo"))
-				Expect(token.ValidateTokenString(t2)).To(Equal("bar"))
+				Expect(token.ValidateTokenString(t1, token.LoginType)).To(Equal("foo"))
+				Expect(token.ValidateTokenString(t2, token.LoginType)).To(Equal("bar"))
 			})
 		})
 
 		Context("when a given token is valid, but expired", func() {
 			It("returns an empty string", func() {
-				t, err := token.GenerateTokenStringWithExpiry("foo", 1*time.Millisecond)
+				t, err := token.GenerateTokenStringWithExpiry("foo", 1*time.Millisecond, token.LoginType)
 				Expect(err).To(BeNil())
 				time.Sleep(2 * time.Millisecond)
-				Expect(token.ValidateTokenString(t)).To(BeEmpty())
+				Expect(token.ValidateTokenString(t, token.LoginType)).To(BeEmpty())
+			})
+		})
+
+		Context("when a given token is valid, but differen token type", func() {
+			It("returns an empty string", func() {
+				t, err := token.GenerateTokenStringWithExpiry("foo", 1*time.Second, token.LoginType)
+				Expect(err).To(BeNil())
+				Expect(token.ValidateTokenString(t, token.TempType)).To(BeEmpty())
 			})
 		})
 
@@ -79,10 +87,10 @@ var _ = Describe("token", func() {
 			})
 
 			It("returns an empty string", func() {
-				t, err := token.GenerateTokenString("foo")
+				t, err := token.GenerateTokenString("foo", token.LoginType)
 				Expect(err).To(BeNil())
 				msgverifier.DefaultMsgVerifier = origMsgVerifier
-				Expect(token.ValidateTokenString(t)).To(BeEmpty())
+				Expect(token.ValidateTokenString(t, token.LoginType)).To(BeEmpty())
 			})
 		})
 	})

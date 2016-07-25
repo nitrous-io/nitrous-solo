@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/nitrous-io/nitrous-solo/controllers"
 	"github.com/nitrous-io/nitrous-solo/pkg/atomicwrite"
+	"github.com/nitrous-io/nitrous-solo/pkg/token"
 )
 
 func Upload(c *gin.Context) {
@@ -102,7 +103,7 @@ func Download(c *gin.Context) {
 		return
 	}
 
-	ud := controllers.GetUserDataByToken(tok)
+	ud := controllers.GetUserDataByToken(tok, token.TempType)
 	if ud == nil {
 		c.JSON(422, gin.H{
 			"error": "invalid_credentials",

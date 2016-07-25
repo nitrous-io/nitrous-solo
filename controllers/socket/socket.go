@@ -3,6 +3,7 @@ package socket
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/nitrous-io/nitrous-solo/controllers"
+	"github.com/nitrous-io/nitrous-solo/pkg/token"
 	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 )
 
@@ -18,7 +19,7 @@ func Socket(c *gin.Context) {
 		return
 	}
 
-	ud := controllers.GetUserDataByToken(tok)
+	ud := controllers.GetUserDataByToken(tok, token.TempType)
 	if ud == nil {
 		c.JSON(422, gin.H{
 			"error": "invalid_credentials",
