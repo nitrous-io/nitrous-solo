@@ -34,6 +34,16 @@ var _ = Describe("token", func() {
 		})
 	})
 
+	Describe("GenerateTokenStringWithExpiry", func() {
+		It("generates unique tokens with given expiry", func() {
+			t1, err := token.GenerateTokenStringWithExpiry("foo", 1*time.Second)
+			Expect(err).To(BeNil())
+			t2, err := token.GenerateTokenStringWithExpiry("foo", 1*time.Second)
+			Expect(err).To(BeNil())
+			Expect(t1).NotTo(Equal(t2))
+		})
+	})
+
 	Describe("ValidateTokenString", func() {
 		Context("when a given token is valid", func() {
 			It("returns login (username)", func() {
@@ -48,19 +58,8 @@ var _ = Describe("token", func() {
 		})
 
 		Context("when a given token is valid, but expired", func() {
-			var origExpiry time.Duration
-
-			BeforeEach(func() {
-				origExpiry = token.Expiry
-				token.Expiry = 1 * time.Millisecond
-			})
-
-			AfterEach(func() {
-				token.Expiry = origExpiry
-			})
-
 			It("returns an empty string", func() {
-				t, err := token.GenerateTokenString("foo")
+				t, err := token.GenerateTokenStringWithExpiry("foo", 1*time.Millisecond)
 				Expect(err).To(BeNil())
 				time.Sleep(2 * time.Millisecond)
 				Expect(token.ValidateTokenString(t)).To(BeEmpty())

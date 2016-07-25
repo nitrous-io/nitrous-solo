@@ -8,7 +8,7 @@ import (
 	"github.com/nitrous-io/nitrous-solo/pkg/msgverifier"
 )
 
-var Expiry = 72 * time.Hour
+var DefaultExpiry = 72 * time.Hour
 
 type token struct {
 	Nonce     string    `json:"n"` // to ensure uniqueness
@@ -17,6 +17,10 @@ type token struct {
 }
 
 func GenerateTokenString(login string) (string, error) {
+	return GenerateTokenStringWithExpiry(login, DefaultExpiry)
+}
+
+func GenerateTokenStringWithExpiry(login string, expiry time.Duration) (string, error) {
 	nonce, err := generateNonce(48)
 	if err != nil {
 		return "", err
@@ -24,7 +28,7 @@ func GenerateTokenString(login string) (string, error) {
 	return msgverifier.DefaultMsgVerifier.Generate(token{
 		Nonce:     nonce,
 		Login:     login,
-		ExpiresAt: time.Now().Add(Expiry),
+		ExpiresAt: time.Now().Add(expiry),
 	})
 }
 
