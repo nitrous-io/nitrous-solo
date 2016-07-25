@@ -22,7 +22,7 @@ App.IdeSidebarActiveFilesView = Em.View.extend
   ).property 'activeFilesMonitor.sortedFiles', 'App.container.collaborators'
 
   findUser: (username)->
-    if App.get('user.username') == username
+    if App.get('user.login') == username
       return App.get 'user'
 
     App.get('container').get('collaborators')?.findBy('username', username)

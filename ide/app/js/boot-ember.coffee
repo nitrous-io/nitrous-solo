@@ -2,8 +2,6 @@ window.EmberENV =
   FEATURES:
     'query-params-new': true
 
-require './fake_json/config'
-
 Em = Ember
 window.NitrousIO = Em.Application.extend Em.Evented,
   rootElement: '#app'
@@ -29,8 +27,6 @@ window.NitrousIO = Em.Application.extend Em.Evented,
   slug: null
 
   user: null
-  userSettings: null
-  userMetadata: null
   hostBinding: Em.Binding.oneWay 'container.host'
 
   eventsSocket: null

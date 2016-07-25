@@ -28,9 +28,9 @@ App.IdeSidebarController = Em.ArrayController.extend
   currentDroppable: null
 
   initialize: ->
-    @set 'homePath', homePath = App.Path.create absolutePath: App.get('userMetadata').home_path, directory: true
+    @set 'homePath', homePath = App.Path.create absolutePath: App.get('user').home_path, directory: true
     @set 'content', Em.A([homePath])
-    @set 'rootPath', App.Path.create absolutePath: App.get('userMetadata').root_path, directory: true
+    @set 'rootPath', App.Path.create absolutePath: App.get('user').root_path, directory: true
 
   reset: ->
     @set 'homePath', null
@@ -45,13 +45,13 @@ App.IdeSidebarController = Em.ArrayController.extend
       Em.run.next =>
         socket = @get 'socket'
         this.openPath @get('rootPath')
-        unless App.get('userMetadata').readme_opened
+        unless App.get('user').readme_opened
           this.openRepoReadme()
         @restoreOpenTabs()
   ).observes 'socket.startedFirstTime', 'socketReady'
 
   restoreOpenTabs: ->
-    if openTabs = App.get('userMetadata').openTabs
+    if openTabs = App.get('user').open_tabs
       index = 0
       for tab in openTabs
         if tab.readme
@@ -73,7 +73,9 @@ App.IdeSidebarController = Em.ArrayController.extend
     this.openPath repoPath, error: false
 
   openRepoReadme: (settings = {}) ->
-    App.get('userMetadata').setMetadata({readmeOpened: true})
+    user = App.get('user')
+    user['readme_opened'] = true
+    user.requestSave()
 
     if codeDir = @get('controllers.ide.codeDir')
       homePath = @get('homePath.absolutePath')
@@ -105,7 +107,7 @@ App.IdeSidebarController = Em.ArrayController.extend
 
       return
 
-    if (readme_url = App.get('userMetadata').readme_url)
+    if (readme_url = App.get('user').readme_url)
       editorController = @get('controllers.ideEditor')
       tab = editorController.createTab(
         content: readme_url
@@ -276,9 +278,11 @@ App.IdeSidebarController = Em.ArrayController.extend
 
   rootPathDidChange: (->
     val = @get 'rootPath'
-    return if App.get('userMetadata').root_path == val
-    return if App.get('userMetadata').root_path == val
-    App.get('userMetadata').setMetadata({rootPath: val.get 'collabPath'})
+    user = App.get('user')
+    return if user.root_path == val
+    return if user.root_path == val
+    user.root_path = val.get 'collabPath'
+    user.requestSave()
   ).observes 'rootPath'
 
   newPath: (path, directory) ->
