@@ -243,29 +243,17 @@ var _ = Describe("fs", func() {
 				Expect(rc.next()).To(BeEmpty())
 			})
 
-			Context("the directory gets deleted", func() {
+			Context("when the directory gets deleted or renamed", func() {
 				var subDir string
 
-				BeforeEach(func() {
-					var err error
-					// Create some files in the directory.
-					subDir = filepath.Join(testDir, "subdir")
-					Expect(os.Mkdir(subDir, 0775)).To(BeNil())
-					Expect(err).To(BeNil())
-
-					f, err := os.Create(filepath.Join(subDir, "script"))
-					Expect(err).To(BeNil())
-					f.Close()
-				})
-
-				It("stops the watcher for the folder", func() {
+				It("stops the watcher for the folder when directory is renamed", func() {
 					doneCalled := false
 					doneFn := func() {
 						doneCalled = true
 					}
 
 					Watch(&ws.Context{
-						Data:    []byte(`{"path": "` + subDir + `"}`),
+						Data:    []byte(`{"path": "` + testDir + `"}`),
 						Reply:   cb,
 						OnClose: onClose,
 						Done:    doneFn,
@@ -280,7 +268,59 @@ var _ = Describe("fs", func() {
 					Expect(ok).To(BeTrue())
 					Expect(watchID).NotTo(BeEmpty())
 
-					// Delete the watching folder
+					// Rename the folder being watched
+					Expect(os.Rename(testDir, testDir+"-new")).To(BeNil())
+					time.Sleep(10 * time.Millisecond)
+
+					var responses [][]byte
+					res = rc.next()
+					for len(res) > 0 {
+						responses = append(responses, res)
+						res = rc.next()
+					}
+
+					Expect(responses).To(HaveLen(2))
+
+					j = parseResponseJSON(responses[0])
+					Expect(j["id"]).To(Equal(watchID))
+					Expect(j["path"]).To(Equal(testDir))
+					Expect(j["evt"]).To(Equal("renamed"))
+
+					j = parseResponseJSON(responses[1])
+					Expect(j["id"]).To(Equal(watchID))
+					Expect(j["evt"]).To(Equal("stopped"))
+
+					Expect(doneCalled).To(BeTrue())
+
+					// Check that the directory is no longer watched
+					Expect(os.MkdirAll(testDir, 0775)).To(BeNil())
+					time.Sleep(10 * time.Millisecond)
+					Expect(rc.next()).To(BeEmpty())
+				})
+
+				It("stops the watcher for the folder when the directory is deleted", func() {
+					doneCalled := false
+					doneFn := func() {
+						doneCalled = true
+					}
+
+					Watch(&ws.Context{
+						Data:    []byte(`{"path": "` + testDir + `"}`),
+						Reply:   cb,
+						OnClose: onClose,
+						Done:    doneFn,
+					})
+
+					res := rc.next()
+					Expect(res).NotTo(BeEmpty())
+
+					j := parseResponseJSON(res)
+					Expect(j["evt"]).To(Equal("started"))
+					watchID, ok := j["id"].(string)
+					Expect(ok).To(BeTrue())
+					Expect(watchID).NotTo(BeEmpty())
+
+					// Delete the folder being watched
 					Expect(os.RemoveAll(testDir)).To(BeNil())
 					time.Sleep(10 * time.Millisecond)
 
@@ -291,28 +331,104 @@ var _ = Describe("fs", func() {
 						res = rc.next()
 					}
 
-					Expect(responses).To(HaveLen(3))
+					Expect(responses).To(HaveLen(4))
 
 					j = parseResponseJSON(responses[0])
 					Expect(j["id"]).To(Equal(watchID))
-					Expect(j["path"]).To(Equal(filepath.Join(subDir, "script")))
+					Expect(j["path"]).To(Equal(filepath.Join(testDir, "script")))
 					Expect(j["evt"]).To(Equal("removed"))
 
 					j = parseResponseJSON(responses[1])
 					Expect(j["id"]).To(Equal(watchID))
-					Expect(j["path"]).To(Equal(subDir))
+					Expect(j["path"]).To(Equal(filepath.Join(testDir, "README.md")))
 					Expect(j["evt"]).To(Equal("removed"))
 
 					j = parseResponseJSON(responses[2])
+					Expect(j["id"]).To(Equal(watchID))
+					Expect(j["path"]).To(Equal(testDir))
+					Expect(j["evt"]).To(Equal("removed"))
+
+					j = parseResponseJSON(responses[3])
 					Expect(j["id"]).To(Equal(watchID))
 					Expect(j["evt"]).To(Equal("stopped"))
 
 					Expect(doneCalled).To(BeTrue())
 
-					// Create the watching folder
-					Expect(os.MkdirAll(subDir, 0775)).To(BeNil())
+					// Check that the directory is no longer watched
+					Expect(os.MkdirAll(testDir, 0775)).To(BeNil())
 					time.Sleep(10 * time.Millisecond)
 					Expect(rc.next()).To(BeEmpty())
+				})
+
+				Context("when the parent directory of the directory being watched is deleted", func() {
+					BeforeEach(func() {
+						var err error
+						// Create some files in the directory.
+						subDir = filepath.Join(testDir, "subdir")
+						Expect(os.Mkdir(subDir, 0775)).To(BeNil())
+						Expect(err).To(BeNil())
+
+						f, err := os.Create(filepath.Join(subDir, "script"))
+						Expect(err).To(BeNil())
+						f.Close()
+					})
+
+					It("stops the watcher", func() {
+						doneCalled := false
+						doneFn := func() {
+							doneCalled = true
+						}
+
+						Watch(&ws.Context{
+							Data:    []byte(`{"path": "` + subDir + `"}`),
+							Reply:   cb,
+							OnClose: onClose,
+							Done:    doneFn,
+						})
+
+						res := rc.next()
+						Expect(res).NotTo(BeEmpty())
+
+						j := parseResponseJSON(res)
+						Expect(j["evt"]).To(Equal("started"))
+						watchID, ok := j["id"].(string)
+						Expect(ok).To(BeTrue())
+						Expect(watchID).NotTo(BeEmpty())
+
+						// Delete the parent folder of the folder being watched
+						Expect(os.RemoveAll(testDir)).To(BeNil())
+						time.Sleep(10 * time.Millisecond)
+
+						var responses [][]byte
+						res = rc.next()
+						for len(res) > 0 {
+							responses = append(responses, res)
+							res = rc.next()
+						}
+
+						Expect(responses).To(HaveLen(3))
+
+						j = parseResponseJSON(responses[0])
+						Expect(j["id"]).To(Equal(watchID))
+						Expect(j["path"]).To(Equal(filepath.Join(subDir, "script")))
+						Expect(j["evt"]).To(Equal("removed"))
+
+						j = parseResponseJSON(responses[1])
+						Expect(j["id"]).To(Equal(watchID))
+						Expect(j["path"]).To(Equal(subDir))
+						Expect(j["evt"]).To(Equal("removed"))
+
+						j = parseResponseJSON(responses[2])
+						Expect(j["id"]).To(Equal(watchID))
+						Expect(j["evt"]).To(Equal("stopped"))
+
+						Expect(doneCalled).To(BeTrue())
+
+						// Check that the directory is no longer watched
+						Expect(os.MkdirAll(subDir, 0775)).To(BeNil())
+						time.Sleep(10 * time.Millisecond)
+						Expect(rc.next()).To(BeEmpty())
+					})
 				})
 			})
 		})

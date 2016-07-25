@@ -133,6 +133,10 @@ func Watch(c *ws.Context) {
 					// Renaming a file also triggers a separate fsnotify.Create event with
 					// the new filename (tested on Linux).
 					ReplyJSON(H{"evt": "renamed", "path": event.Name, "id": w.id}, reply)
+					if event.Name == watchPath {
+						stop()
+						return
+					}
 				}
 
 			case err := <-watcher.Errors:
