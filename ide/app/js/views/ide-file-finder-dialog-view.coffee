@@ -7,9 +7,6 @@ App.IdeFileFinderDialogView = App.IdeModalDialogView.extend
 
   pollerKey: null
 
-  didInsertElement: ->
-    @get('controller').initialize()
-
   viewDidAppear: ->
     @_super()
     this.setupPoller()

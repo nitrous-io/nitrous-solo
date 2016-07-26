@@ -26,16 +26,11 @@ window.NitrousIO = Em.Application.extend Em.Evented,
 
   flashMessage: null
 
-  slug: null
-
   user: null
   userSettings: null
   userMetadata: null
-  hostBinding: Em.Binding.oneWay 'container.host'
 
-  eventsSocket: null
-  pingerSocket: null
-  pinger: null
+  socket: null
 
   terminalJsPath: null
   terminalCssPath: null
@@ -46,8 +41,6 @@ window.NitrousIO = Em.Application.extend Em.Evented,
   fileTreeHidden: false
 
   redirecting: false
-
-  freighterdFeatures: null
 
   didChangeTitle: (->
     title = @get 'title'

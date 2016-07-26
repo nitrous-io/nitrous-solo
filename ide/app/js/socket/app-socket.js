@@ -1,12 +1,13 @@
 import Socket from './socket';
 
 App.Socket = Em.Object.extend(Em.Evented, {
+  token: null,
   started: false,
   startedFirstTime: false,
 
   init() {
-    const token = App.localStorage.get('token');
-    const url = `${location.protocol.replace("http", "ws")}//${location.host}/socket?token=${token}`;
+    this._super()
+    const url = `${location.protocol.replace("http", "ws")}//${location.host}/socket?token=${this.token}`;
     const conn = this.conn = new Socket(url);
 
     conn.onopen = () => this.didOpen();
