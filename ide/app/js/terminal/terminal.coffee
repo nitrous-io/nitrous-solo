@@ -143,19 +143,27 @@ window.NitrousTerminal =
     window.clearTimeout(@bufferTimeout)
     @dataBuffer += data
     decoded = @dataBuffer
-    try
-      decoded = decodeUTF8(@dataBuffer)
 
     flush = =>
       @dataBuffer = ''
       @term.write(decoded)
 
-    # if invalid utf8 char is detected, buffer with timeout
-    if decoded.length > 0 && decoded[decoded.length - 1] == "\uFFFD"
+    buffer = =>
       @bufferTimeout = window.setTimeout(=>
         flush()
         @bufferTimeout = null
       , 200)
+      return
+
+    try
+      decoded = decodeUTF8(@dataBuffer)
+      # if invalid utf8 char is detected, buffer
+      if decoded.length > 0 && decoded[decoded.length - 1] == "\uFFFD"
+        buffer()
+        return
+    catch
+      # if utf8 decoding fails, buffer
+      buffer()
       return
 
     flush()
