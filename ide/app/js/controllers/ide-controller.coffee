@@ -1,7 +1,9 @@
+requestTempToken = require('../lib/request-temp-token.js').default
+
 freighterFeaturesRetry = 3000 # 3s
 
 App.IdeController = Em.ObjectController.extend
-  needs: ['ideFindInProject', 'ideFileFinder']
+  needs: ['ideFileFinder', 'ideFindInProject']
 
   socket: null
   collabSocket: null
@@ -33,19 +35,18 @@ App.IdeController = Em.ObjectController.extend
 
   initialize: ->
     if App.localStorage.get('token')
-      @set 'socket', socket = App.Socket.create()
-      socket.connect()
+      requestTempToken().then (resp) =>
+        @set 'socket', socket = App.Socket.create({token: resp.token})
+        App.set('socket', socket)
+        socket.connect()
 
-    router = App.get 'router'
-    router.get('ideLayoutController').initialize()
-    router.get('ideMainMenuController').initialize()
-    router.get('ideSidebarController').initialize()
-    router.get('ideEditorController').initialize()
-    router.get('ideConsoleController').initialize()
-
-    if App.localStorage.get('token')
-      @set 'socket', socket = App.Socket.create()
-      socket.connect()
+        router = App.get 'router'
+        router.get('ideLayoutController').initialize()
+        router.get('ideMainMenuController').initialize()
+        router.get('ideSidebarController').initialize()
+        router.get('ideEditorController').initialize()
+        router.get('ideConsoleController').initialize()
+        @get('controllers.ideFileFinder').initialize()
 
   reset: ->
     if socket = @get 'socket'
