@@ -51,15 +51,21 @@ var _ = Describe("fs", func() {
 	})
 
 	Describe("fs.Watch", func() {
-		var onClose chan struct{}
+		var (
+			onClose           chan struct{}
+			origWatchInterval time.Duration
+		)
 
 		BeforeEach(func() {
 			onClose = make(chan struct{}, 1)
+			origWatchInterval = watchInterval
+			watchInterval = 5 * time.Millisecond
 		})
 
 		AfterEach(func() {
 			// close connection
 			onClose <- struct{}{}
+			watchInterval = origWatchInterval
 		})
 
 		Context("when invalid JSON is given", func() {

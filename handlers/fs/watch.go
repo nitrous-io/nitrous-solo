@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/fsnotify/fsnotify"
@@ -18,12 +19,17 @@ var (
 	// a watcher in a different WS handler.
 	watches     = make(map[string]*watch)
 	watchesLock sync.Mutex // map operations aren't thread safe
+
+	watchInterval = 100 * time.Millisecond
 )
 
 type watch struct {
-	id       string
-	stop     chan struct{}
-	stopOnce *sync.Once
+	id                 string
+	stop               chan struct{}
+	stopOnce           *sync.Once
+	events             []*fsnotify.Event
+	lastEvent          *fsnotify.Event
+	lastEventTimestamp time.Time
 }
 
 func newWatch() *watch {
@@ -110,35 +116,17 @@ func Watch(c *ws.Context) {
 
 	go func() {
 		defer watcher.Close()
+
 		for {
 			select {
 			case event := <-watcher.Events:
-				if event.Op&fsnotify.Create > 0 {
-					ReplyJSON(H{"evt": "created", "path": event.Name, "id": w.id}, reply)
+				if w.handleEvent(watchPath, &event, reply) {
+					stop()
+					return
 				}
 
-				if event.Op&fsnotify.Write > 0 {
-					ReplyJSON(H{"evt": "modified", "path": event.Name, "id": w.id}, reply)
-				}
-
-				if event.Op&fsnotify.Remove > 0 {
-					ReplyJSON(H{"evt": "removed", "path": event.Name, "id": w.id}, reply)
-					if event.Name == watchPath {
-						stop()
-						return
-					}
-				}
-
-				if event.Op&fsnotify.Rename > 0 {
-					// Renaming a file also triggers a separate fsnotify.Create event with
-					// the new filename (tested on Linux).
-					ReplyJSON(H{"evt": "renamed", "path": event.Name, "id": w.id}, reply)
-					if event.Name == watchPath {
-						stop()
-						return
-					}
-				}
-
+				w.lastEvent = &event
+				w.lastEventTimestamp = time.Now()
 			case err := <-watcher.Errors:
 				// watcher shouldn't stop when it publishes error
 				logrus.Warnf("fs.Watch: fsnotify watcher error on %q, err: %v", j.Path, err)
@@ -186,4 +174,40 @@ func Unwatch(c *ws.Context) {
 	w.stopOnce.Do(func() {
 		w.stop <- struct{}{}
 	})
+}
+
+func (w *watch) handleEvent(watchPath string, event *fsnotify.Event, reply func([]byte)) (stop bool) {
+	if w.lastEvent != nil {
+		if w.lastEvent.Op == event.Op && w.lastEvent.Name == event.Name && time.Now().Sub(w.lastEventTimestamp) < watchInterval {
+			return true
+		}
+	}
+
+	if event.Op&fsnotify.Create > 0 {
+		ReplyJSON(H{"evt": "created", "path": event.Name, "id": w.id}, reply)
+		return false
+	}
+
+	if event.Op&fsnotify.Write > 0 {
+		ReplyJSON(H{"evt": "modified", "path": event.Name, "id": w.id}, reply)
+		return false
+	}
+
+	if event.Op&fsnotify.Remove > 0 {
+		ReplyJSON(H{"evt": "removed", "path": event.Name, "id": w.id}, reply)
+		if event.Name == watchPath {
+			return true
+		}
+	}
+
+	if event.Op&fsnotify.Rename > 0 {
+		// Renaming a file also triggers a separate fsnotify.Create event with
+		// the new filename (tested on Linux).
+		ReplyJSON(H{"evt": "renamed", "path": event.Name, "id": w.id}, reply)
+		if event.Name == watchPath {
+			return true
+		}
+	}
+
+	return false
 }
