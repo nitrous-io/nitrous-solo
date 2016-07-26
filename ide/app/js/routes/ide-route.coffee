@@ -15,6 +15,7 @@ App.IdeRoute = Em.Route.extend
         ).then ((res) =>
           # token is valid. set App.token and resume loading IDE
           App.set('token', t)
+          App.set('user', App.User.create(res.user))
           transition.retry()
         ), (jqxhr) =>
           if jqxhr.responseJSON?.error == 'invalid_token'
@@ -32,17 +33,9 @@ App.IdeRoute = Em.Route.extend
         window.location.href = '/#/login'
       return
 
-    userFetch = App.User.fetch().then (user) ->
-      App.set 'user', user
-    userSettingsFetch = App.UserSettings.fetch().then (settings) ->
-      App.set 'userSettings', settings
-    userMetadataFetch = App.UserMetadata.fetch().then (metadata) ->
-      App.set 'userMetadata', metadata
-    Em.RSVP.allSettled([userFetch, userSettingsFetch, userMetadataFetch])
-
   persistData: ->
     TabWatcher.syncChanges()
-    App.get('userSettings')?.save()
+    App.get('user')?.save()
 
   activate: ->
     # warn the user before actually unload the window. This is helpful to

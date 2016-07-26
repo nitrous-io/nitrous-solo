@@ -1,6 +1,6 @@
 window.TabWatcher = class @TabWatcher
   instance = null
-  constructor: (@rootPane, @userMetadata) ->
+  constructor: (@rootPane, @user) ->
     @changedAt = null
     @lastSynced = null
     instance ?= this
@@ -29,15 +29,15 @@ window.TabWatcher = class @TabWatcher
 
         change = {
           path: pathValue,
-          scrollPosition: tab.get('scrollPosition'),
+          scroll_position: tab.get('scrollPosition'),
           selections: tab.get('selections'),
           active: tab.get('active'),
           readme: tab.get('readme')
         }
         changes.push change
 
-    @userMetadata.setMetadata({openTabs: changes}).catch =>
-      @scheduleSync(10000)
+    @user.open_tabs = changes
+    @user.requestSave()
 
   @notifyOfChange: ->
     return unless instance
