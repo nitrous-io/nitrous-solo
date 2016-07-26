@@ -31,14 +31,18 @@ func Draw(r *gin.Engine, appDir string) {
 	r.POST("/token", auth.CreateToken)
 
 	// routes requiring "token" query param
-	r.GET("/socket", socket.Socket)
-	r.GET("/files", files.Download)
 
 	{ // routes requiring authentication
 		ar := r.Group("", middleware.VerifyToken)
 		ar.GET("/user", user.Show)
 		ar.POST("/files", files.Upload)
 		ar.POST("/token/temp", auth.CreateTemporaryToken)
+	}
+
+	{ // routes requiring temp token
+		ttr := r.Group("", middleware.VerifyTempToken)
+		ttr.GET("/socket", socket.Socket)
+		ttr.GET("/files", files.Download)
 	}
 
 	ws.RegisterHandler("ping", ping_.Ping)

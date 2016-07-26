@@ -12,7 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/nitrous-io/nitrous-solo/controllers"
 	"github.com/nitrous-io/nitrous-solo/pkg/atomicwrite"
-	"github.com/nitrous-io/nitrous-solo/pkg/token"
 )
 
 func Upload(c *gin.Context) {
@@ -90,29 +89,7 @@ func Upload(c *gin.Context) {
 }
 
 func Download(c *gin.Context) {
-	tok := c.Query("token")
 	path := c.Query("path")
-
-	if tok == "" {
-		c.JSON(422, gin.H{
-			"error": "invalid_params",
-			"errors": map[string]string{
-				"token": "is required",
-			},
-		})
-		return
-	}
-
-	ud := controllers.GetUserDataByToken(tok, token.TempType)
-	if ud == nil {
-		c.JSON(422, gin.H{
-			"error": "invalid_credentials",
-			"errors": map[string]string{
-				"token": "is invalid",
-			},
-		})
-		return
-	}
 
 	if path == "" {
 		c.JSON(422, gin.H{

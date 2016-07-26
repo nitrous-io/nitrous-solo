@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -284,13 +285,12 @@ var _ = Describe("files", func() {
 			filePath string
 			dir      string
 			err      error
+
+			params url.Values
 		)
 
-		doRequest := func(path string) {
-			req, err := http.NewRequest("GET", s.URL+"/files?token="+tok+"&path="+path, nil)
-			Expect(err).To(BeNil())
-
-			res, err = http.DefaultClient.Do(req)
+		doRequest := func() {
+			res, err = MakeRequest("GET", s.URL+"/files", params, nil, nil)
 			Expect(err).To(BeNil())
 		}
 
@@ -303,6 +303,11 @@ var _ = Describe("files", func() {
 
 			tok, err = token.GenerateTokenString("foobar", token.TempType)
 			Expect(err).To(BeNil())
+
+			params = url.Values{
+				"path":  {filePath},
+				"token": {tok},
+			}
 		})
 
 		AfterEach(func() {
@@ -310,7 +315,7 @@ var _ = Describe("files", func() {
 		})
 
 		It("returns 200 OK with the file", func() {
-			doRequest(filePath)
+			doRequest()
 
 			Expect(res.StatusCode).To(Equal(http.StatusOK))
 			Expect(res.Header.Get("Content-Disposition")).To(Equal("attachment; filename=hello.txt"))
@@ -332,10 +337,12 @@ var _ = Describe("files", func() {
 
 				fileInDir := filepath.Join(otherDir, "bar.txt")
 				Expect(ioutil.WriteFile(fileInDir, []byte("qux"), 0644)).To(BeNil())
+
+				params.Set("path", dir)
 			})
 
 			It("returns 200 OK with zip file", func() {
-				doRequest(dir)
+				doRequest()
 
 				Expect(res.StatusCode).To(Equal(http.StatusOK))
 				Expect(res.Header.Get("Content-Disposition")).To(Equal("attachment; filename=" + filepath.Base(dir) + ".zip"))
@@ -379,8 +386,12 @@ var _ = Describe("files", func() {
 		})
 
 		Context("when the file does not exist", func() {
+			BeforeEach(func() {
+				params.Set("path", "nowhere")
+			})
+
 			It("returns 422 with invalid_params", func() {
-				doRequest("nowhere")
+				doRequest()
 
 				b := &bytes.Buffer{}
 				_, err = b.ReadFrom(res.Body)
@@ -397,8 +408,12 @@ var _ = Describe("files", func() {
 		})
 
 		Context("when path is missing", func() {
+			BeforeEach(func() {
+				params.Del("path")
+			})
+
 			It("returns 422 with invalid_params", func() {
-				doRequest("")
+				doRequest()
 
 				b := &bytes.Buffer{}
 				_, err = b.ReadFrom(res.Body)
@@ -414,49 +429,11 @@ var _ = Describe("files", func() {
 			})
 		})
 
-		Context("when token is missing", func() {
-			BeforeEach(func() {
-				tok = ""
-			})
-
-			It("returns 422 with invalid_params", func() {
-				doRequest(dir)
-
-				b := &bytes.Buffer{}
-				_, err = b.ReadFrom(res.Body)
-				Expect(err).To(BeNil())
-
-				Expect(res.StatusCode).To(Equal(422))
-				Expect(b.String()).To(MatchJSON(`{
-					"error": "invalid_params",
-					"errors": {
-						"token": "is required"
-					}
-				}`))
-			})
-		})
-
-		Context("when token is wrong", func() {
-			BeforeEach(func() {
-				tok, err = token.GenerateTokenString("foobarqux", token.TempType)
-				Expect(err).To(BeNil())
-			})
-
-			It("returns 422 with invalid_token", func() {
-				doRequest(dir)
-
-				b := &bytes.Buffer{}
-				_, err = b.ReadFrom(res.Body)
-				Expect(err).To(BeNil())
-
-				Expect(res.StatusCode).To(Equal(422))
-				Expect(b.String()).To(MatchJSON(`{
-					"error": "invalid_credentials",
-					"errors": {
-						"token": "is invalid"
-					}
-				}`))
-			})
+		sharedexamples.ItRequiresTempToken(func() (*data.UserData, *url.Values) {
+			return ud, &params
+		}, func() *http.Response {
+			doRequest()
+			return res
 		})
 	})
 })

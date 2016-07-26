@@ -12,7 +12,7 @@ import (
 	"github.com/nitrous-io/nitrous-solo/data"
 	"github.com/nitrous-io/nitrous-solo/pkg/token"
 	"github.com/nitrous-io/nitrous-solo/server"
-	. "github.com/nitrous-io/nitrous-solo/testhelper"
+	"github.com/nitrous-io/nitrous-solo/testhelper/sharedexamples"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -28,13 +28,15 @@ var _ = Describe("socket", func() {
 		res  *http.Response
 		conn *websocket.Conn
 		err  error
+
+		ud *data.UserData
 	)
 
 	BeforeEach(func() {
 		s = httptest.NewServer(server.New(""))
 
 		data.D = data.Reset()
-		ud := &data.UserData{
+		ud = &data.UserData{
 			Login: "foobar",
 			User:  "nitrous",
 		}
@@ -91,41 +93,11 @@ var _ = Describe("socket", func() {
 			})
 		})
 
-		Context("when token is empty", func() {
-			It("returns 422 invalid params", func() {
-				doRequest()
-				Expect(err).NotTo(BeNil())
-
-				Expect(res.StatusCode).To(Equal(422))
-				j := ParseJSONBody(res.Body)
-				Expect(j["error"]).To(Equal("invalid_params"))
-				Expect(j["errors"]).To(Equal(map[string]interface{}{
-					"token": "is required",
-				}))
-			})
-		})
-
-		Context("when token is not valid", func() {
-			BeforeEach(func() {
-				tok, err := token.GenerateTokenString("foo", token.TempType)
-				Expect(err).To(BeNil())
-
-				params = url.Values{
-					"token": {tok},
-				}
-			})
-
-			It("returns 422 invalid params", func() {
-				doRequest()
-				Expect(err).NotTo(BeNil())
-
-				Expect(res.StatusCode).To(Equal(422))
-				j := ParseJSONBody(res.Body)
-				Expect(j["error"]).To(Equal("invalid_credentials"))
-				Expect(j["errors"]).To(Equal(map[string]interface{}{
-					"token": "is invalid",
-				}))
-			})
+		sharedexamples.ItRequiresTempToken(func() (*data.UserData, *url.Values) {
+			return ud, &params
+		}, func() *http.Response {
+			doRequest()
+			return res
 		})
 	})
 })
