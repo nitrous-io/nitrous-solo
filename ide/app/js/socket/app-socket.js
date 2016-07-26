@@ -361,7 +361,7 @@ App.Socket = Em.Object.extend(Em.Evented, {
     }
     this.conn.send('sh.i', JSON.stringify([
       shellSessionID,
-      btoa(data)
+      btoa(encodeUTF8(data))
     ]));
   },
 
