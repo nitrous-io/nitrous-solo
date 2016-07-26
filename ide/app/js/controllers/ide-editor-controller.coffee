@@ -55,12 +55,6 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
     CodeMirror.commands.save = (cm) =>
       @saveDocument(@get('activeTab'))
 
-  socketDidStartForTheFirstTime: (->
-    if @get 'socket.startedFirstTime'
-      socket = @get 'socket'
-      socket.on 'fileChanged.output', _.bind(@handleFileChanged, this)
-  ).observes 'socket.startedFirstTime'
-
   reset: ->
     @set 'content', null
     @set 'saveDialog', null

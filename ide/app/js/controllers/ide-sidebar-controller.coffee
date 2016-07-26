@@ -1,4 +1,5 @@
-window.watchManager = require('../lib/watchmanager').default;
+requestTempToken = require('../lib/request-temp-token.js').default
+watchManager = require('../lib/watchmanager').default
 Path = require('path')
 
 App.IdeSidebarController = Em.ArrayController.extend
@@ -151,14 +152,17 @@ App.IdeSidebarController = Em.ArrayController.extend
 
   downloadPath: (path) ->
     if !path.get('loading')
-      url = "/files?token=#{App.get('token')}&path=#{path.get('absolutePath')}"
-      downloadFrame = $('<iframe></iframe>')
-      downloadFrame.css 'display', 'none'
-      downloadFrame.attr 'src', url
-      $('body').append downloadFrame
-      window.setTimeout(->
-        downloadFrame.remove()
-      , 5000)
+      requestTempToken().then (resp) =>
+        url = "/files?token=#{resp.token}&path=#{path.get('absolutePath')}"
+        downloadFrame = $('<iframe></iframe>')
+        downloadFrame.css 'display', 'none'
+        downloadFrame.attr 'src', url
+        $('body').append downloadFrame
+        window.setTimeout(->
+          downloadFrame.remove()
+        , 5000)
+      , (jqxhr) ->
+        App.postError(jqxhr.responseJSON, 'Could not download file, please try again.')
 
   reveal: (path) ->
     return unless path.get
