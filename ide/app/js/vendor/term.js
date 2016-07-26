@@ -1964,7 +1964,7 @@ Terminal.prototype.write = function(data) {
           // CSI > P s c
           // Send Device Attributes (Secondary DA)
           case 'c':
-            this.sendDeviceAttributes(this.params);
+            //this.sendDeviceAttributes(this.params);
             break;
 
           // CSI Pm d
