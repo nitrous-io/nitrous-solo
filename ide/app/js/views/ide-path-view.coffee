@@ -46,28 +46,15 @@ App.IdePathView = Em.View.extend App.IdeDragDropViewMixin,
 
   dragStart: (event) ->
     @_super event
-    path = @get 'path'
-    path.set 'expanded', false
-    path.set 'selected', false
-    @get('controller').set 'currentlyDraggedPath', path
+    @get('controller').dragStart(@get('path'))
 
   dragEnter: (event) ->
     @_super event
-    controller = @get 'controller'
-    previousDroppable = controller.get 'currentDroppable'
-    if previousDroppable && !previousDroppable.isDestroyed
-      previousDroppable.set 'droppable', false
-    if droppable = this._getDroppable()
-      droppable.set 'droppable', true
-      controller.set 'currentDroppable', droppable
+    @get('controller').dragEnter(@_getDroppable())
 
   drop: (event) ->
     @_super event
-    if droppable = this._getDroppable()
-      droppable.set 'droppable', false
-      path = droppable.get 'path'
-      @get('controller').moveDraggedPathTo path
-    @get('controller').set 'currentlyDraggedPath', null
+    @get('controller').drop(@_getDroppable())
 
   _selectFile: (event) ->
     this._preventDefaultAndPropagation event

@@ -109,13 +109,13 @@ App.IdeSidebarController = Em.ArrayController.extend
       @fetchFileContent path, settings
 
   openDirectory: (path) ->
-    return if path.get('loading') || !@get('socketReady')
+    return unless @get('socketReady')
 
     path.set('expanded', true)
     @watchAndFetchRecursively(path)
 
   closeDirectory: (path) ->
-    return if path.get('loading') || !@get('socketReady')
+    return unless @get('socketReady')
 
     path.set('expanded', false)
     @unwatchRecursively(path)
@@ -150,9 +150,9 @@ App.IdeSidebarController = Em.ArrayController.extend
   fetchFileList: (path, cb) ->
     socket = @get 'socket'
     path.incrementProperty 'loadCount'
-    socket.fetchFileList path.get('absolutePath'), (err, content) ->
+    socket.fetchFileList path.get('absolutePath'), (err, content) =>
       if err
-        path.set 'expanded', false
+        @closeDirectory(path)
       else
         path.updateContent content
         if typeof cb == 'function'
@@ -402,11 +402,31 @@ App.IdeSidebarController = Em.ArrayController.extend
         # TODO: not strictly necessary but, remove all children paths recursively from 'content' too?
         this.get('content').removeObject path
 
+  dragStart: (path) ->
+    path.set 'selected', false
+    @closeDirectory(path)
+    @set 'currentlyDraggedPath', path
+
+  dragEnter: (droppable) ->
+    previousDroppable = @get 'currentDroppable'
+    if previousDroppable && !previousDroppable.isDestroyed
+      previousDroppable.set 'droppable', false
+    if droppable
+      droppable.set 'droppable', true
+      @set 'currentDroppable', droppable
+
+  drop: (droppable) ->
+    if droppable
+      droppable.set 'droppable', false
+      path = droppable.get 'path'
+      @moveDraggedPathTo path
+    @set 'currentlyDraggedPath', null
+
   moveDraggedPathTo: (path) ->
     draggedPath = @get 'currentlyDraggedPath'
     absoluteDroppablePath = path.get 'absolutePath'
     #expand the droppable path
-    path.set 'expanded', true
+    @openDirectory(path)
     this.applyRenamedPath draggedPath, path, true
     @set 'currentlyDraggedPath', null
     @set 'currentDroppable', null
@@ -432,10 +452,7 @@ App.IdeSidebarController = Em.ArrayController.extend
           watchManager.debounce id, 100, =>
             @refreshPath(Path.dirname(path))
 
-        onStop = (id) =>
-          @unwatchRecursively(watchManager.pathForID(id))
-
-        @get('socket').watch(absPath, onStart, onChange, onStop)
+        @get('socket').watch(absPath, onStart, onChange)
 
       if content = pathObj.get('content')
         for subpath in content
