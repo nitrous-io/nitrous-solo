@@ -285,15 +285,12 @@ App.IdeSidebarController = Em.ArrayController.extend
       else
         socket.writeFile absolutePath, false, '', callback
 
-    @get('controllers.ideEditor').trackActivity()
-
   cancelNewPath: (path) ->
     if parentPath = @findParentPath(path)
       parentPath.get('content').removeObject path
 
   renamePath: (path) ->
     path.set 'editable', true
-    @get('controllers.ideEditor').trackActivity()
 
   # apply rename operations to path
   # - path: the path object that we want to rename
@@ -378,7 +375,6 @@ App.IdeSidebarController = Em.ArrayController.extend
 
   confirmDelete: (path) ->
     @set 'confirmDeletePathDialog', App.ConfirmDeletePathDialog.create path: path
-    @get('controllers.ideEditor').trackActivity()
 
   delete: (path) ->
     return if path == @get 'rootPath'

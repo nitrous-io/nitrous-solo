@@ -178,8 +178,6 @@ App.IdeDocumentView = Em.View.extend
         Em.run.scheduleOnce 'afterRender', =>
           parentView.get('editorPane')?.makeActive()
 
-      @get('controller')?.trackActivity()
-
     editor.on 'blur', =>
       if @get 'document.focused'
         @set 'document.focused', false
@@ -189,9 +187,6 @@ App.IdeDocumentView = Em.View.extend
       # and dropped.
       if selections = cm.listSelections()
         @set 'document.selections', selections
-
-      # Track any cursor activity as user activity.
-      @get('controller')?.trackActivity()
 
     editor.on 'scroll', (cm) =>
       if scroll = cm.getScrollInfo()
