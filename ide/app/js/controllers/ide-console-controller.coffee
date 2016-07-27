@@ -1,4 +1,4 @@
-App.IdeConsoleController = Em.ArrayController.extend App.IdeTabControllerMixin, App.TerminalConnectionMixin,
+App.IdeConsoleController = Em.ArrayController.extend App.IdeTabControllerMixin,
   needs: ['ideFileFinder', 'ide']
 
   modelClass: App.ConsoleSession

@@ -25,9 +25,6 @@ rulerMenu = menu 'Ruler', [
       column == App.get('router.ideEditorController.rulerColumn')
     ).property 'App.router.ideEditorController.rulerColumn'
 
-isOwner = (container) ->
-  App.get('user.id') == container.user_id
-
 themesMenu = menu 'Themes', _.map [
   { name: 'solarized dark', label: 'Solarized Dark' }
   { name: 'vibrant-ink', label: 'Vibrant Ink' }
@@ -58,36 +55,34 @@ App.IdeMainMenuView = Em.View.extend
   templateName: 'main-menu'
   elementId: 'ide-main-menu-view'
 
-  previewPortBinding: Em.Binding.oneWay 'App.container.previewPort'
-  dashboardURLBinding: Em.Binding.oneWay 'App.dashboardURL'
   userBinding: Em.Binding.oneWay 'App.user'
 
   previewItems: (->
     [
       menuItem "Port 3000 -- HTTP",
-        url: "http://#{App.get 'container.preview_hostname'}"
+        url: "http://FIXME"
         target: '_blank'
       menuItem "Port 3000 -- HTTPS",
-        url: "https://#{App.get 'container.preview_hostname'}"
+        url: "https://FIXME"
         target: '_blank'
       menuItem "Port 4000",
-        url: "http://#{App.get 'container.preview_hostname'}:4000"
+        url: "http://FIXME"
         target: '_blank'
       menuItem "Port 4567",
-        url: "http://#{App.get 'container.preview_hostname'}:4567"
+        url: "http://FIXME"
         target: '_blank'
       menuItem "Port 8080",
-        url: "http://#{App.get 'container.preview_hostname'}:8080"
+        url: "http://FIXME"
         target: '_blank'
       menuItem "Port 8888",
-        url: "http://#{App.get 'container.preview_hostname'}:8888"
+        url: "http://FIXME"
         target: '_blank'
       separator,
       menuItem 'Preview Help',
         url: 'https://community.nitrous.io/docs/preview-your-app'
         target: '_blank'
     ]
-  ).property 'App.container', 'App.container.previewablePorts.@each'
+  ).property()
 
   helpMenuItems: (->
     items = [
@@ -105,7 +100,7 @@ App.IdeMainMenuView = Em.View.extend
         url: 'https://community.nitrous.io/posts/tagged/changelog'
         target: '_blank'
     ]
-  ).property 'App.container', 'App.container.env', 'App.container.env.NITROUS_README_URL'
+  ).property()
 
   menu: (->
     base = [

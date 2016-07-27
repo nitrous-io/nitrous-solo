@@ -11,13 +11,6 @@ App.InjectTerminalIframeMixin = Em.Mixin.create
     iframeDocument.open()
     iframeDocument.close()
 
-    # terminalCssPath and terminalJsPath are determined at build time
-    # if CLOUDFRONT_ENDPOINT is set, the paths at build time will look like
-    # '//asdf.cloudfront.net/assets/terminal-abcdef.js'
-    # Otherwise paths look like "/assets/terminal-abcdef.js" and we add origin
-
-    #cssPath = App.get('terminalCssPath')
-    #jsPath = App.get('terminalJsPath')
     cssPath = "/assets/terminal.css"
     jsPath = "/assets/terminal.js"
 
