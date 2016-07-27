@@ -88,7 +88,7 @@ App.IdeSidebarController = Em.ArrayController.extend
       @openFile(path, settings)
 
   openFile: (path, settings={}) ->
-    return if path.get('loading') || !@get('socketReady')
+    return unless @get('socketReady')
 
     if settings.error != false && typeof settings.error != 'function'
       settings.error = (err) ->

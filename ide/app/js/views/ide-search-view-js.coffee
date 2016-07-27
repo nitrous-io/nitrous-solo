@@ -10,7 +10,7 @@ App.IdeSearchView = Em.View.extend
       # filename will be relative to home directory
       path = App.Path.create absolutePath: filename
       if sidebar = App.get('router.ideSidebarController')
-        sidebar.togglePath path,
+        sidebar.openFile path,
           done: (doc) ->
             Em.run.next ->
               doc.set('goToLine', line.lineNumber)
