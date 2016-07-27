@@ -22,11 +22,23 @@ class Socket {
       return;
     }
 
-    const ws = this._ws = new WebSocket(this.url);
-    ws.onopen = (e) => this._onopen(e);
-    ws.onclose = (e) => this._onclose(e);
-    ws.onmessage = (e) => this._onmessage(e);
-    ws.onerror = (e) => this._onerror(e);
+    const connect = () => {
+      const ws = this._ws = new WebSocket(this.url);
+      ws.onopen = (e) => this._onopen(e);
+      ws.onclose = (e) => this._onclose(e);
+      ws.onmessage = (e) => this._onmessage(e);
+      ws.onerror = (e) => this._onerror(e);
+    };
+
+    const retry = () => {
+      this._reconnect();
+    };
+
+    if (typeof this.onbeforeopen === 'function') {
+      this.onbeforeopen(connect, retry);
+    } else {
+      connect();
+    }
   }
 
   close() {
