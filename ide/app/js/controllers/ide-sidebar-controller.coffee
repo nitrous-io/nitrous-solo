@@ -41,85 +41,53 @@ App.IdeSidebarController = Em.ArrayController.extend
     @set 'currentDroppable', null
 
   socketDidStartForTheFirstTime: (->
-    if @get('socket.startedFirstTime') && @get('socketReady')
+    if @get('socket.connectionCount') == 1
       Em.run.next =>
         socket = @get 'socket'
-        this.openPath @get('rootPath')
-        unless App.get('userMetadata').readme_opened
-          this.openRepoReadme()
+        @openDirectory @get('rootPath')
         @restoreOpenTabs()
-  ).observes 'socket.startedFirstTime', 'socketReady'
+  ).observes 'socket.connectionCount'
+
+  socketDidBecomeReady: (->
+    if @get('socketReady')
+      # reset watchmanager and rewatch watched paths
+      watchManager.reset()
+      rootPath = @get('rootPath')
+      if rootPath && rootPath.get('expanded')
+        @watchAndFetchRecursively(rootPath)
+  ).observes 'socketReady'
 
   restoreOpenTabs: ->
     if openTabs = App.get('userMetadata').openTabs
       index = 0
       for tab in openTabs
-        if tab.readme
-          this.openRepoReadme active: tab.active, index: index
-        else if tab.path
+        if tab.path
           pth = App.Path.create absolutePath: tab.path, directory: false
-          this.openPath pth,
+          this.togglePath pth,
             error: false
             active: tab.active
             index: index
             scrollPosition: tab.scrollPosition
             selections: tab.selections
+        else
+          continue
         index++
-
-  openRepoDir: ->
-    workspacePath = App.Path.create absolutePath: 'workspace', directory: true
-    this.openPath workspacePath, error: false
-    repoPath = App.Path.create absolutePath: "workspace/#{@get('repository.shortName')}", directory: true
-    this.openPath repoPath, error: false
-
-  openRepoReadme: (settings = {}) ->
-    App.get('userMetadata').setMetadata({readmeOpened: true})
-
-    if codeDir = @get('controllers.ide.codeDir')
-      homePath = @get('homePath.absolutePath')
-
-      dirPath = App.Path.create absolutePath: "#{homePath}/code", directory: true
-      this.openPath dirPath, error: false
-
-      codeDirPath = App.Path.create absolutePath: "#{homePath}/code/#{codeDir}", directory: true
-      this.openPath codeDirPath, error: false
-
-      # Try to open one of these readme files.
-      readmes = ['README.nitrous.md', 'README.md', 'README.markdown', 'README']
-      processingIdx = 0
-
-      tryNextReadme = (errMsg) =>
-        processingIdx = processingIdx + 1
-        if processingIdx < readmes.length
-          openReadme(readmes[processingIdx])
-
-      openReadme = (readme) =>
-        path = "#{homePath}/code/#{codeDir}/#{readme}"
-        readmePath = App.Path.create absolutePath: path, directory: false
-        this.openPath readmePath,
-          error: tryNextReadme
-          active: settings.active
-          index: settings.index
-
-      openReadme(readmes[0])
-
-      return
-
-    if (readme_url = App.get('userMetadata').readme_url)
-      editorController = @get('controllers.ideEditor')
-      tab = editorController.createTab(
-        content: readme_url
-        path: readme_url
-        active: settings.active
-        index: settings.index
-        title: 'README'
-        readme: true
-      , App.Iframe)
 
   # settings options:
   #   done: callback (document)
   #   error: callback (errorMessage)
-  openPath: (path, settings = {}) ->
+  togglePath: (path, settings={}) ->
+    return if path.get('loading') || !@get('socketReady')
+
+    if path.get 'directory'
+      if path.get('expanded')
+        @closeDirectory(path)
+      else
+        @openDirectory(path)
+    else
+      @openFile(path, settings)
+
+  openFile: (path, settings={}) ->
     return if path.get('loading') || !@get('socketReady')
 
     if settings.error != false && typeof settings.error != 'function'
@@ -131,24 +99,26 @@ App.IdeSidebarController = Em.ArrayController.extend
             "Cannot open the selected file - #{err.replace(/_/g, ' ')}."
         App.postError message
 
-    if path.get 'directory'
-      socket = @get 'socket'
-      path.set 'expanded', !path.get('expanded')
-
-      if path.get 'expanded'
-        @watchAndFetchRecursively(path)
-      else
-        @unwatchRecursively(path)
-
+    editorController = @get('controllers.ideEditor')
+    if doc = editorController.findProperty 'path', path
+      unless settings.active == false
+        editorController.makeTabActive doc
+      if settings.done
+        settings.done(doc)
     else
-      editorController = @get('controllers.ideEditor')
-      if doc = editorController.findProperty 'path', path
-        unless settings.active == false
-          editorController.makeTabActive doc
-        if settings.done
-          settings.done(doc)
-      else
-        this.fetchFileContent path, settings
+      @fetchFileContent path, settings
+
+  openDirectory: (path) ->
+    return if path.get('loading') || !@get('socketReady')
+
+    path.set('expanded', true)
+    @watchAndFetchRecursively(path)
+
+  closeDirectory: (path) ->
+    return if path.get('loading') || !@get('socketReady')
+
+    path.set('expanded', false)
+    @unwatchRecursively(path)
 
   downloadPath: (path) ->
     if !path.get('loading')
@@ -170,7 +140,7 @@ App.IdeSidebarController = Em.ArrayController.extend
     while parent = path.get 'parentAbsolutePath'
       path = App.Path.create absolutePath: parent, directory: true
       unless path.get 'expanded'
-        @openPath path
+        @togglePath path
     origPath.set 'showInSidebar', true
     if previouslySelectedPath = @get 'currentlySelectedPath'
       previouslySelectedPath.set 'selected', false
@@ -285,7 +255,7 @@ App.IdeSidebarController = Em.ArrayController.extend
   ).observes 'rootPath'
 
   newPath: (path, directory) ->
-    this.openPath path if !path.get 'expanded'
+    this.togglePath path if !path.get 'expanded'
     newPath = App.Path.create
       absolutePath: "#{path.get('absolutePath')}/__aio_untitled_path__"
       new: true

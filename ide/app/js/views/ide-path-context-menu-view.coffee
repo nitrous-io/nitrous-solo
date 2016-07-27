@@ -28,7 +28,7 @@ App.IdePathContextMenuView = Em.View.extend
   actions:
     didClickOpen: ->
       path = @get 'path'
-      @get('controller').openPath path
+      @get('controller').togglePath path
 
     didClickRefresh: ->
       path = @get 'path'

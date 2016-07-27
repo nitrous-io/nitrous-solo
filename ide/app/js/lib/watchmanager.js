@@ -8,10 +8,6 @@ class WatchManager {
     this.debounceFuncs = {}; // <ID, functions>
   }
 
-  rewatch() {
-    // on websocket reconnect, rewatch existing watches
-  }
-
   add(id, path) {
     this.watches[id] = path;
   }
