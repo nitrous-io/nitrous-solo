@@ -7,7 +7,7 @@ export default function requestTempToken() {
         Authorization: `Token ${App.localStorage.get('token')}`
       }
     }).done(function (data, status, jqxhr) {
-      resolve(data);
+      resolve(data.token);
     }).fail(function (jqxhr) {
       reject(jqxhr);
     })

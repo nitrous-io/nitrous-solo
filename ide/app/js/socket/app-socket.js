@@ -1,4 +1,5 @@
-import Socket from './socket';
+import Socket from '../pkg/socket';
+import requestTempToken from '../lib/request-temp-token';
 
 App.Socket = Em.Object.extend(Em.Evented, {
   token: null,
@@ -7,12 +8,20 @@ App.Socket = Em.Object.extend(Em.Evented, {
 
   init() {
     this._super()
-    const url = `${location.protocol.replace("http", "ws")}//${location.host}/socket?token=${this.token}`;
-    const conn = this.conn = new Socket(url);
 
+    const conn = this.conn = new Socket();
     conn.onopen = () => this.didOpen();
     conn.onclose = (ev) => this.didClose(ev);
     conn.onmessage = (msgName, msgId, data) => this.didReceiveMessage(msgName, msgId, data);
+
+    conn.onbeforeopen = function(open, retry) {
+      requestTempToken().then((token) => {
+        conn.url = `${location.protocol.replace("http", "ws")}//${location.host}/socket?token=${token}`;
+        open();
+      }, () => {
+        retry();
+      });
+    };
   },
 
   connect() {
