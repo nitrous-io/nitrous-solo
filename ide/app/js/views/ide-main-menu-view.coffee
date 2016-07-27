@@ -90,14 +90,7 @@ App.IdeMainMenuView = Em.View.extend
   ).property 'App.container', 'App.container.previewablePorts.@each'
 
   helpMenuItems: (->
-    items = []
-    if App.get('userMetadata').readme_url
-      items.push(
-        menuItem 'View README', callback: (controller) ->
-          controller.helpNitrousReadme()
-        separator
-      )
-    items.push(
+    items = [
       menuItem 'Help Center',
         url: 'https://community.nitrous.io/docs'
         target: '_blank'
@@ -111,8 +104,7 @@ App.IdeMainMenuView = Em.View.extend
       menuItem 'Updates',
         url: 'https://community.nitrous.io/posts/tagged/changelog'
         target: '_blank'
-    )
-    items
+    ]
   ).property 'App.container', 'App.container.env', 'App.container.env.NITROUS_README_URL'
 
   menu: (->
