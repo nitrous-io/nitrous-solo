@@ -23,7 +23,7 @@ var (
 	ErrInvalidOwner = errors.New("failed_to_get_file_owner")
 )
 
-func AtomicWrite(r io.Reader, path string, runAs string, overwrite bool) error {
+func AtomicWrite(r io.Reader, path string, runAs string, perm os.FileMode, overwrite bool) error {
 	targetPath := path
 
 	fi, err := os.Lstat(targetPath)
@@ -74,7 +74,7 @@ func AtomicWrite(r io.Reader, path string, runAs string, overwrite bool) error {
 		}
 	}
 
-	f, err := ioutil.TempFile("", "nitrous")
+	f, err := ioutil.TempFile("", "nitrous-temp")
 	if err != nil {
 		return err
 	}
@@ -101,28 +101,32 @@ func AtomicWrite(r io.Reader, path string, runAs string, overwrite bool) error {
 			return err
 		}
 	} else {
-		// it is a new file
-		u, err := user.Lookup(runAs)
-		if err != nil {
-			return ErrInvalidUser
+		if runAs != "" {
+			// it is a new file
+			u, err := user.Lookup(runAs)
+			if err != nil {
+				return ErrInvalidUser
+			}
+
+			uid, err := strconv.Atoi(u.Uid)
+			if err != nil {
+				return err
+			}
+
+			gid, err := strconv.Atoi(u.Gid)
+			if err != nil {
+				return err
+			}
+
+			if err := f.Chown(uid, gid); err != nil {
+				return err
+			}
 		}
 
-		uid, err := strconv.Atoi(u.Uid)
-		if err != nil {
-			return err
-		}
-
-		gid, err := strconv.Atoi(u.Gid)
-		if err != nil {
-			return err
-		}
-
-		if err := f.Chown(uid, gid); err != nil {
-			return err
-		}
-
-		if err := f.Chmod(0644); err != nil {
-			return err
+		if perm == 0 {
+			if err := f.Chmod(0644); err != nil {
+				return err
+			}
 		}
 	}
 

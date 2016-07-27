@@ -58,7 +58,7 @@ func Upload(c *gin.Context) {
 				return
 			}
 
-			if err := atomicwrite.AtomicWrite(part, filepath.Join(location, part.FileName()), ud.User, true); err != nil {
+			if err := atomicwrite.AtomicWrite(part, filepath.Join(location, part.FileName()), ud.User, 0644, true); err != nil {
 				if err == atomicwrite.ErrPermissionDenied {
 					c.JSON(http.StatusForbidden, gin.H{
 						"error":             "invalid_request",

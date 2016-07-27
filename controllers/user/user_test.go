@@ -40,7 +40,7 @@ var _ = Describe("user", func() {
 		}
 		err := ud.SetPassword("foo123")
 		Expect(err).To(BeNil())
-		data.D.Users[ud.Login] = ud
+		data.D.UserData[ud.Login] = ud
 
 		tok, err = token.GenerateTokenString("foobar", token.LoginType)
 		Expect(err).To(BeNil())

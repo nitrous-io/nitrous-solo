@@ -51,7 +51,7 @@ func Write(c *ws.Context) {
 	}
 
 	buf := bytes.NewBuffer(content)
-	if err := atomicwrite.AtomicWrite(buf, j.Path, runAs, j.Overwrite); err != nil {
+	if err := atomicwrite.AtomicWrite(buf, j.Path, runAs, 0644, j.Overwrite); err != nil {
 		switch err {
 		case atomicwrite.ErrSymlinkTooDeep, atomicwrite.ErrPathIsDirectory,
 			atomicwrite.ErrPermissionDenied, atomicwrite.ErrFileExist, atomicwrite.ErrInvalidUser:

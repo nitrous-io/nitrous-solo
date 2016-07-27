@@ -56,7 +56,7 @@ var _ = Describe("files", func() {
 		}
 		err := ud.SetPassword("foo123")
 		Expect(err).To(BeNil())
-		data.D.Users[ud.Login] = ud
+		data.D.UserData[ud.Login] = ud
 
 		u, err := user.Lookup(runAs)
 

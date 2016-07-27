@@ -57,7 +57,7 @@ var _ = Describe("pkg/atomicwrite", func() {
 		})
 
 		It("writes the content to a file", func() {
-			Expect(atomicwrite.AtomicWrite(content, pathToWrite, runAs, false)).To(BeNil())
+			Expect(atomicwrite.AtomicWrite(content, pathToWrite, runAs, 0, false)).To(BeNil())
 
 			fi, err := os.Stat(pathToWrite)
 			Expect(err).To(BeNil())
@@ -79,7 +79,7 @@ var _ = Describe("pkg/atomicwrite", func() {
 
 			It("follows the symlink to write to the actual file", func() {
 				Expect(
-					atomicwrite.AtomicWrite(content, pathToWrite, runAs, false),
+					atomicwrite.AtomicWrite(content, pathToWrite, runAs, 0, false),
 				).To(Equal(atomicwrite.ErrInvalidUser))
 			})
 		})
@@ -91,7 +91,7 @@ var _ = Describe("pkg/atomicwrite", func() {
 
 			Context("when overwrite param is true", func() {
 				It("overwrites the file", func() {
-					Expect(atomicwrite.AtomicWrite(content, pathToWrite, runAs, true)).To(BeNil())
+					Expect(atomicwrite.AtomicWrite(content, pathToWrite, runAs, 0, true)).To(BeNil())
 
 					content, err := ioutil.ReadFile(pathToWrite)
 					Expect(err).To(BeNil())
@@ -106,7 +106,7 @@ var _ = Describe("pkg/atomicwrite", func() {
 
 					It("returns an error", func() {
 						Expect(
-							atomicwrite.AtomicWrite(content, pathToWrite, runAs, true),
+							atomicwrite.AtomicWrite(content, pathToWrite, runAs, 0, true),
 						).To(Equal(atomicwrite.ErrPermissionDenied))
 
 						content, err := ioutil.ReadFile(pathToWrite)
@@ -124,7 +124,7 @@ var _ = Describe("pkg/atomicwrite", func() {
 
 					It("returns an error", func() {
 						Expect(
-							atomicwrite.AtomicWrite(content, pathToWrite, runAs, true),
+							atomicwrite.AtomicWrite(content, pathToWrite, runAs, 0, true),
 						).To(Equal(atomicwrite.ErrPathIsDirectory))
 					})
 				})
@@ -138,7 +138,7 @@ var _ = Describe("pkg/atomicwrite", func() {
 					})
 
 					It("writes to the actual file to which the symlink is pointing", func() {
-						Expect(atomicwrite.AtomicWrite(content, symlinkPath, runAs, true)).To(BeNil())
+						Expect(atomicwrite.AtomicWrite(content, symlinkPath, runAs, 0, true)).To(BeNil())
 
 						content, err := ioutil.ReadFile(pathToWrite)
 						Expect(err).To(BeNil())
@@ -156,7 +156,7 @@ var _ = Describe("pkg/atomicwrite", func() {
 
 						It("returns an error", func() {
 							Expect(
-								atomicwrite.AtomicWrite(content, symlinkPath, runAs, true),
+								atomicwrite.AtomicWrite(content, symlinkPath, runAs, 0, true),
 							).To(Equal(atomicwrite.ErrSymlinkTooDeep))
 						})
 					})
@@ -166,7 +166,7 @@ var _ = Describe("pkg/atomicwrite", func() {
 			Context("when the overwrite param is false", func() {
 				It("returns an error", func() {
 					Expect(
-						atomicwrite.AtomicWrite(content, pathToWrite, runAs, false),
+						atomicwrite.AtomicWrite(content, pathToWrite, runAs, 0, false),
 					).To(Equal(atomicwrite.ErrFileExist))
 
 					content, err := ioutil.ReadFile(pathToWrite)
@@ -182,7 +182,7 @@ var _ = Describe("pkg/atomicwrite", func() {
 
 					It("returns an error", func() {
 						Expect(
-							atomicwrite.AtomicWrite(content, pathToWrite, runAs, false),
+							atomicwrite.AtomicWrite(content, pathToWrite, runAs, 0, false),
 						).To(Equal(atomicwrite.ErrPermissionDenied))
 
 						content, err := ioutil.ReadFile(pathToWrite)
@@ -200,7 +200,7 @@ var _ = Describe("pkg/atomicwrite", func() {
 
 					It("returns an error", func() {
 						Expect(
-							atomicwrite.AtomicWrite(content, pathToWrite, runAs, false),
+							atomicwrite.AtomicWrite(content, pathToWrite, runAs, 0, false),
 						).To(Equal(atomicwrite.ErrPathIsDirectory))
 					})
 				})
@@ -215,7 +215,7 @@ var _ = Describe("pkg/atomicwrite", func() {
 
 					It("returns an error if symlink points to a file", func() {
 						Expect(
-							atomicwrite.AtomicWrite(content, symlinkPath, runAs, false),
+							atomicwrite.AtomicWrite(content, symlinkPath, runAs, 0, false),
 						).To(Equal(atomicwrite.ErrFileExist))
 
 						content, err := ioutil.ReadFile(pathToWrite)
@@ -234,7 +234,7 @@ var _ = Describe("pkg/atomicwrite", func() {
 
 						It("returns an error", func() {
 							Expect(
-								atomicwrite.AtomicWrite(content, symlinkPath, runAs, false),
+								atomicwrite.AtomicWrite(content, symlinkPath, runAs, 0, false),
 							).To(Equal(atomicwrite.ErrSymlinkTooDeep))
 						})
 					})

@@ -60,7 +60,7 @@ func GetUserDataByToken(tok string, tokenType token.Type) *data.UserData {
 		return nil
 	}
 
-	ud, ok := data.D.Users[login]
+	ud, ok := data.D.UserData[login]
 	if !ok {
 		return nil
 	}

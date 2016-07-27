@@ -39,7 +39,12 @@ func main() {
 	}
 
 	data.DataDirPath = dataDirPath
-	data.Load()
+	if err := data.LoadUserData(); err != nil {
+		logrus.Fatal(err)
+	}
+	if err := data.LoadIDEData(); err != nil {
+		logrus.Fatal(err)
+	}
 
 	r := server.New(appDir)
 	r.Run(bindAddr)

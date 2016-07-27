@@ -25,7 +25,7 @@ func CreateToken(c *gin.Context) {
 		return
 	}
 
-	ud, ok := data.D.Users[login]
+	ud, ok := data.D.UserData[login]
 
 	if !ok || !ud.VerifyPassword(password) {
 		c.JSON(422, gin.H{

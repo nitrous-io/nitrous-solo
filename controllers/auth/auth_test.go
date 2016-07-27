@@ -41,7 +41,7 @@ var _ = Describe("auth", func() {
 		}
 		err := ud.SetPassword("foo123")
 		Expect(err).To(BeNil())
-		data.D.Users[ud.Login] = ud
+		data.D.UserData[ud.Login] = ud
 	})
 
 	AfterEach(func() {
@@ -139,11 +139,6 @@ var _ = Describe("auth", func() {
 			}
 
 			origTempTokenExpiry = auth.DefaultTemporaryTokenExpiry
-			auth.DefaultTemporaryTokenExpiry = 10 * time.Millisecond
-		})
-
-		AfterEach(func() {
-			auth.DefaultTemporaryTokenExpiry = origTempTokenExpiry
 		})
 
 		doRequest := func() {
@@ -171,20 +166,30 @@ var _ = Describe("auth", func() {
 				Expect(token.ValidateTokenString(t, token.TempType)).To(Equal("foobar"))
 			})
 
-			It("the token expires after default expiry", func() {
-				doRequest()
-				Expect(err).To(BeNil())
+			Context("after expiry", func() {
+				BeforeEach(func() {
+					auth.DefaultTemporaryTokenExpiry = 10 * time.Millisecond
+				})
 
-				Expect(res.StatusCode).To(Equal(http.StatusOK))
-				j := ParseJSONBody(res.Body)
-				t, ok := j["token"].(string)
-				Expect(ok).To(BeTrue())
-				Expect(t).NotTo(BeEmpty())
-				Expect(token.ValidateTokenString(t, token.TempType)).To(Equal("foobar"))
+				AfterEach(func() {
+					auth.DefaultTemporaryTokenExpiry = origTempTokenExpiry
+				})
 
-				time.Sleep(10 * time.Millisecond)
+				It("the token expires after default expiry", func() {
+					doRequest()
+					Expect(err).To(BeNil())
 
-				Expect(token.ValidateTokenString(t, token.TempType)).To(BeEmpty())
+					Expect(res.StatusCode).To(Equal(http.StatusOK))
+					j := ParseJSONBody(res.Body)
+					t, ok := j["token"].(string)
+					Expect(ok).To(BeTrue())
+					Expect(t).NotTo(BeEmpty())
+					Expect(token.ValidateTokenString(t, token.TempType)).To(Equal("foobar"))
+
+					time.Sleep(10 * time.Millisecond)
+
+					Expect(token.ValidateTokenString(t, token.TempType)).To(BeEmpty())
+				})
 			})
 		})
 	})

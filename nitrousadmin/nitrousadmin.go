@@ -30,7 +30,9 @@ func main() {
 	}
 
 	data.DataDirPath = dataDirPath
-	data.Load()
+	if err := data.LoadUserData(); err != nil {
+		logrus.Fatal(err)
+	}
 
 	args := flag.Args()
 
@@ -127,13 +129,13 @@ func addUser(params []string) {
 	ud.SetPassword(password)
 
 	update := false
-	if _, ok := data.D.Users[login]; ok {
+	if _, ok := data.D.UserData[login]; ok {
 		fmt.Printf("User \"%s\" already exists, updating instead of creating...\n", login)
 		update = true
 	}
 
-	data.D.Users[login] = ud
-	if err := data.Save(); err != nil {
+	data.D.UserData[login] = ud
+	if err := data.SaveUserData(); err != nil {
 		logrus.Fatal(err)
 	}
 
@@ -151,11 +153,11 @@ func delUser(params []string) {
 
 	login := strings.ToLower(params[0])
 
-	if _, ok := data.D.Users[login]; !ok {
+	if _, ok := data.D.UserData[login]; !ok {
 		logrus.Fatalf(`User "%s" not found`, login)
 	}
-	delete(data.D.Users, login)
-	if err := data.Save(); err != nil {
+	delete(data.D.UserData, login)
+	if err := data.SaveUserData(); err != nil {
 		logrus.Fatal(err)
 	}
 

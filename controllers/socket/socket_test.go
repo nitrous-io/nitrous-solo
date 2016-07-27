@@ -42,7 +42,7 @@ var _ = Describe("socket", func() {
 		}
 		err := ud.SetPassword("foo123")
 		Expect(err).To(BeNil())
-		data.D.Users[ud.Login] = ud
+		data.D.UserData[ud.Login] = ud
 	})
 
 	AfterEach(func() {
