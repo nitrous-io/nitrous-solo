@@ -1,5 +1,0 @@
-.ui.card.auto
-  .card-body
-    i.spinner
-    i.fa
-      = view.content.message

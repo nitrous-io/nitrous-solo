@@ -1,5 +1,3 @@
-freighterFeaturesRetry = 3000 # 3s
-
 App.IdeController = Em.ObjectController.extend
   needs: ['ideFileFinder', 'ideFindInProject']
 
@@ -61,8 +59,6 @@ App.IdeController = Em.ObjectController.extend
     @set 'repository', null
     @set 'content', null
     @set 'errorDialog', null
-    @set 'resumeSessionDialog', null
-    @set 'startProjectDialog', null
 
   socketDisconnected: (->
     unless @get('socketReady')

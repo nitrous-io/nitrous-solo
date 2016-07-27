@@ -174,30 +174,6 @@ App.IdeMainMenuController = Em.Controller.extend
     if editorController = @get 'controllers.ideEditor'
       editorController.resetFontSize()
 
-  showConfirmStopHostDialog: ->
-    ui.showModal '#confirm-stop-host-dialog'
-
-  closeConfirmStopHostDialog: ->
-    ui.hideModal '#confirm-stop-host-dialog'
-
-  stopHost: (hostSlug) ->
-    url = "/hosts/#{hostSlug}/stop"
-    ui.hideModal '#confirm-stop-host-dialog'
-    ui.showModal '#stopping-host-dialog'
-    Em.RSVP.Promise.resolve(
-      Em.$.ajax(
-        type: 'POST',
-        url: "/api/v0/hosts/#{hostSlug}/stop",
-        headers: { Authorization: "Bearer #{App.get 'token'}" }
-      )).then((data) =>
-        ui.hideModal '#stopping-host-dialog'
-        @transitionToRoute '/'
-        App.snackbar.post("Workstation #{hostSlug} stopped")
-      , (jqxhr) =>
-        ui.hideModal '#stopping-host-dialog'
-        App.snackbar.postError(jqxhr.responseJSON, "Failed to stop workstation #{hostSlug}!")
-      )
-
   _toggleEditorProperty: (property) ->
     if editorController = @get 'controllers.ideEditor'
       editorController.toggleProperty(property)
