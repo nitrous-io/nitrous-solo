@@ -26,8 +26,6 @@ App.IdeDocumentView = Em.View.extend
 
   foldGutterClass: 'CodeMirror-foldgutter'
 
-  collabMode: false
-
   otClient: Em.computed.alias 'document.otClient'
   # if set, it will be used when otClient is initialized
   otUndoManagerOverride: Em.computed.alias 'document.otUndoManagerOverride'
@@ -41,23 +39,13 @@ App.IdeDocumentView = Em.View.extend
     @insertEditor()
     if fileName = @get 'document.path.absolutePath'
       @set 'mode', App.FileTypeDetect.detect(fileName)
-      @set 'collabMode', true
     $(window).on "unload.#{@get('elementId')}", =>
-      @leaveCollab()
       return # need to return void
 
   willDestroyElement: ->
     @_super()
     @destroyEditor()
-    @leaveCollab()
     $(window).off "unload.#{@get('elementId')}"
-
-  collabNamespace: (->
-    containerSlug = App.get 'container.slug'
-    collabPath = @get 'document.path.collabPath'
-    if containerSlug && collabPath
-      "#{containerSlug}:#{collabPath}"
-  ).property 'App.container.slug', 'document.path.collabPath'
 
   modeName: (->
     CodeMirror.MODES[@get('mode')]
@@ -221,68 +209,11 @@ App.IdeDocumentView = Em.View.extend
     if editor = @get 'editor'
       editor.set setting, @get(setting)
 
-  # don't call this method directly, instead, set collabMode to true
-  _joinCollab: ->
-    return unless namespace = @get 'collabNamespace'
-    return if @get 'otClient'
-    editor = @get 'editor'
-    editor.set 'readOnly', true
-    cm = editor.get 'codeMirror'
-    collabSocket = App.get 'router.ideController.collabSocket'
-    doc = @get 'document.content'
-
-    collabSocket.one "doc|#{namespace}", (data) =>
-      if data.document != doc
-        @set 'document.content', data.document
-      serverAdapter = new ot.CollabSocketAdapter(collabSocket, namespace)
-      editorAdapter = new ot.CodeMirrorAdapter(cm)
-      otClient = new ot.EditorClient(data.revision, data.clients, serverAdapter, editorAdapter)
-      if undoManager = @get 'otUndoManagerOverride'
-        otClient.undoManager = undoManager
-        @set 'otUndoManagerOverride', null
-      @set 'otClient', otClient
-      editor.set 'readOnly', false
-      @focusedDidChange()
-
-    collabSocket.on "rejoin_failed|#{namespace}", =>
-      editor.set 'readOnly', true
-      @set 'shouldReloadDocument', true
-
-    collabSocket.send(namespace, 'join', doc)
-
-  leaveCollab: ->
-    @set 'collabMode', false
-    return unless otClient = @get 'otClient'
-    collabSocket = App.get 'router.ideController.collabSocket'
-
-    if namespace = @get 'collabNamespace'
-      collabSocket.send(namespace, 'leave')
-      collabSocket.off "rejoin_failed|#{namespace}"
-
-    @clearCollabCursors(otClient)
-
-    otClient.serverAdapter.off()
-    otClient.serverAdapter = null
-    otClient.editorAdapter.detach()
-    otClient.editorAdapter = null
-    @set 'otClient', null
-
-  clearCollabCursors: (otClient)->
-    collabClientIDs = Object.keys(otClient.clients)
-    collabClientIDs.forEach (id) =>
-      otClient.clients[id].remove()
-
-  collabModeDidChange: (->
-    if @get('collabMode') && @get('controller.collabSocketReady')
-      @_joinCollab()
-  ).observes 'collabMode', 'controller.collabSocketReady'
-
   shouldReloadDocumentDidChange: (->
     return unless @get('shouldReloadDocument') && @get('controller.socketReady')
     @set 'shouldReloadDocument', false
     doc = @get 'document'
     return unless fileName = doc.get 'path.absolutePath'
-    @leaveCollab()
     controller = @get 'controller'
     socket = controller.get 'socket'
     socket.fetchFileContent fileName, (err, contentType, content) =>
@@ -290,7 +221,6 @@ App.IdeDocumentView = Em.View.extend
         controller.removeTab(doc, true)
         return
       doc.set 'content', content
-      @set 'collabMode', true
   ).observes 'shouldReloadDocument', 'controller.socketReady'
 
   modeDidChange: (->
@@ -488,16 +418,6 @@ App.IdeDocumentView = Em.View.extend
   documentPathDidChange: (->
     if fileName = @get 'document.path.absolutePath'
       @set 'mode', App.FileTypeDetect.detect(fileName)
-      @set 'collabMode', true
-
-    ###
-    On file rename, leave the collab session under the old filename, and
-    join a new session under the new file name. Otherwise the collaborator
-    will not be able to collaborate on the newly named file.
-    ###
-    @leaveCollab()
-    @set 'document.path.collabPath', fileName
-    @_joinCollab()
   ).observes 'document.path.absolutePath'
 
   actions:

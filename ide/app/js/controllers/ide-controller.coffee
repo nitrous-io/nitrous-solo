@@ -4,8 +4,6 @@ App.IdeController = Em.ObjectController.extend
   needs: ['ideFileFinder', 'ideFindInProject']
 
   socket: null
-  collabSocket: null
-  collabEnabled: true
 
   repository: null
   errorDialog: null
@@ -17,17 +15,10 @@ App.IdeController = Em.ObjectController.extend
   socketReadyBinding: Em.Binding.oneWay 'socket.started'
   socketNotReady: Em.computed.not 'socketReady'
 
-  collabSocketReadyBinding: Em.Binding.oneWay 'collabSocket.started'
-  collabSocketNotReady: Em.computed.not 'collabSocketReady'
-
   ideSocketsReady: (->
     return false if !@get('socketReady')
-
-    if @get('collabEnabled')
-      return @get('collabSocketReady')
-
     return true
-  ).property 'socketReady', 'collabSocketReady', 'collabEnabled'
+  ).property 'socketReady'
 
   ideSocketsNotReady: Em.computed.not 'ideSocketsReady'
 

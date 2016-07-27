@@ -14,10 +14,6 @@ App.IdeEditorFindReplaceView document=view.document
         | {{view.document.findError}}
 
   .ide-toolbar-btns
-    unless collabEnabled
-      button.ui.btn.disabled title='Upgrade your workspace to enable collaborative editing.'
-        | Collab Disabled
-
     .ui.btn.dropdown
       span
         if view.softTabs

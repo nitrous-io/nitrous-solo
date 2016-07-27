@@ -18,10 +18,6 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
   socketBinding: Em.Binding.oneWay 'App.router.ideController.socket'
   socketReadyBinding: Em.Binding.oneWay 'App.router.ideController.socketReady'
 
-  collabEnabledBinding: Em.Binding.oneWay 'App.router.ideController.collabEnabled'
-  collabSocketBinding: Em.Binding.oneWay 'App.router.ideController.collabSocket'
-  collabSocketReadyBinding: Em.Binding.oneWay 'App.router.ideController.collabSocketReady'
-
   pingerSocketBinding: Em.Binding.oneWay 'App.pingerSocket'
 
   activeFilesMonitorBinding: Em.Binding.oneWay 'App.router.ideController.activeFilesMonitor'
@@ -102,7 +98,6 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
   handleFileChanged: (err, file) ->
     path = App.Path.create(absolutePath: file)
     if doc = @findProperty 'path', path
-      return unless doc.isOTMaster()
       return unless doc.get('clean')
 
       lastUpdated = doc.get('documentLastUpdated')
