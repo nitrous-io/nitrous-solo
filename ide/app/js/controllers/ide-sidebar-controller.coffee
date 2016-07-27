@@ -240,9 +240,10 @@ App.IdeSidebarController = Em.ArrayController.extend
       controller.showFindDialog(path.absolutePath)
 
   setHomeAsRoot: ->
-    @set 'rootPath', @get('homePath')
-    @set 'rootPath.expanded', true
-    @refresh @get 'rootPath'
+    homePath = @get('homePath')
+    @set 'rootPath', homePath
+    if !homePath.get('expanded')
+      @openDirectory(homePath)
 
   setPathAsRoot: (path) ->
     @set 'rootPath', path
