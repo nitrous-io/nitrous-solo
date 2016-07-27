@@ -101,16 +101,22 @@ App.Socket = Em.Object.extend(Em.Evented, {
       }
       switch (message.evt) {
         case 'started':
-          onStart(message.id);
+          if (typeof onStart === 'function') {
+            onStart(message.id);
+          }
           break;
 
         case 'stopped':
           done();
-          onStop(message.id);
+          if (typeof onStop === 'function') {
+            onStop(message.id);
+          }
           break;
 
         default:
-          onChange(message.id, message.evt, message.path);
+          if (typeof onChange === 'function') {
+            onChange(message.id, message.evt, message.path);
+          }
       }
     });
   },
