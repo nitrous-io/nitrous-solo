@@ -253,7 +253,8 @@ var _ = Describe("sh", func() {
 				It("return an error and kills the command", func() {
 					Run(&ws.Context{
 						Data: []byte(`{
-							"cmd": "vi",
+							"cmd": "/bin/sleep",
+							"args": ["10"],
 							"timeout": 10,
 							"run_as": "` + currUser.Username + `"
 						}`),
