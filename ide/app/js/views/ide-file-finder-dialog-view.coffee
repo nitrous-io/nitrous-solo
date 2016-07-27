@@ -82,5 +82,5 @@ App.IdeFileFinderDialogView = App.IdeModalDialogView.extend
       if line = @get 'patternLineNumber'
         pos = {line: line-1, ch: 0}
         opts.selections = [{anchor: pos, head: pos}]
-      sidebar.togglePath path, opts
+      sidebar.openFile path, opts
 
