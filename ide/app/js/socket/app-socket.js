@@ -4,7 +4,7 @@ import requestTempToken from '../lib/request-temp-token';
 App.Socket = Em.Object.extend(Em.Evented, {
   token: null,
   started: false,
-  startedFirstTime: false,
+  connectionCount: 0, // number of times socket was (re-)connected
 
   init() {
     this._super()
@@ -38,9 +38,7 @@ App.Socket = Em.Object.extend(Em.Evented, {
 
   didOpen() {
     this.set('started', true);
-    if (!this.get('startedFirstTime')) {
-      this.set('startedFirstTime', true);
-    }
+    this.incrementProperty('connectionCount');
     this.trigger('open');
   },
 
