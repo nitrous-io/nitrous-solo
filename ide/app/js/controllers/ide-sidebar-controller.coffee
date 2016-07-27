@@ -152,8 +152,8 @@ App.IdeSidebarController = Em.ArrayController.extend
 
   downloadPath: (path) ->
     if !path.get('loading')
-      requestTempToken().then (resp) =>
-        url = "/files?token=#{resp.token}&path=#{path.get('absolutePath')}"
+      requestTempToken().then (token) =>
+        url = "/files?token=#{token}&path=#{path.get('absolutePath')}"
         downloadFrame = $('<iframe></iframe>')
         downloadFrame.css 'display', 'none'
         downloadFrame.attr 'src', url

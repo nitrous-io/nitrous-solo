@@ -11,7 +11,7 @@ import (
 	"github.com/nitrous-io/nitrous-solo/pkg/token"
 )
 
-var DefaultTemporaryTokenExpiry = 30 * time.Second
+var DefaultTemporaryTokenExpiry = 5 * time.Second
 
 func CreateToken(c *gin.Context) {
 	login := strings.ToLower(c.PostForm("login"))
