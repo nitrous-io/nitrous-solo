@@ -26,6 +26,7 @@ window.NitrousIO = Em.Application.extend Em.Evented,
   settings: null
 
   socket: null
+  pinger: null
 
   terminalJsPath: null
   terminalCssPath: null
