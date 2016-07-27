@@ -35,6 +35,7 @@ func Draw(r *gin.Engine, appDir string) {
 	{ // routes requiring authentication
 		ar := r.Group("", middleware.VerifyToken)
 		ar.GET("/user", user.Show)
+		ar.PUT("/user/ide_settings", user.SaveIDESettings)
 		ar.POST("/files", files.Upload)
 		ar.POST("/token/temp", auth.CreateTemporaryToken)
 	}

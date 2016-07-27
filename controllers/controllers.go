@@ -80,3 +80,22 @@ func CurrentUserData(c *gin.Context) *data.UserData {
 	}
 	return ud
 }
+
+func CurrentUserIDESettings(c *gin.Context) data.IDESettings {
+	ui, exists := c.Get(CurrentUserDataKey)
+	if ui == nil || !exists {
+		return nil
+	}
+
+	ud, ok := ui.(*data.UserData)
+	if !ok {
+		return nil
+	}
+
+	d, ok := data.D.IDESettings[ud.Login]
+	if !ok {
+		return nil
+	}
+
+	return d
+}

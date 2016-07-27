@@ -21,23 +21,25 @@ var (
 )
 
 const (
-	defaultUserDataFileName = "nitrous-solo-users.dat"
-	defaultIDEDataFileName  = "nitrous-solo-ide.json"
+	defaultUserDataFileName    = "nitrous-solo-users.dat"
+	defaultIDESettingsFileName = "nitrous-solo-ide.json"
 )
 
 func init() {
 	D = Reset()
 }
 
+type IDESettings map[string]interface{}
+
 type Data struct {
-	UserData map[string]*UserData              // <Login, *UserData>
-	IDEData  map[string]map[string]interface{} // <Login, JSON-data>
+	UserData    map[string]*UserData   // <Login, *UserData>
+	IDESettings map[string]IDESettings // <Login, IDESettings (JSON)>
 }
 
 func Reset() *Data {
 	return &Data{
-		UserData: map[string]*UserData{},
-		IDEData:  map[string]map[string]interface{}{},
+		UserData:    map[string]*UserData{},
+		IDESettings: map[string]IDESettings{},
 	}
 }
 
@@ -69,20 +71,20 @@ func LoadUserData() error {
 	return nil
 }
 
-func LoadIDEData() error {
+func LoadIDESettings() error {
 	if DataDirPath == "" {
 		logrus.Fatalf("path to data directory must be defined")
 	}
 
 	// load ide data
-	p := ideDataFileName()
+	p := ideSettingsFileName()
 
 	b, err := ioutil.ReadFile(p)
 	if err != nil && !os.IsNotExist(err) {
 		return errors.New(fmt.Sprintf(`could not load IDE data file "%s" - %v`, p, err))
 	}
 
-	d := map[string]map[string]interface{}{}
+	d := map[string]IDESettings{}
 
 	if err == nil {
 		if err := json.Unmarshal(b, &d); err != nil {
@@ -90,7 +92,7 @@ func LoadIDEData() error {
 		}
 	}
 
-	D.IDEData = d
+	D.IDESettings = d
 	return nil
 }
 
@@ -119,7 +121,7 @@ func SaveUserData() error {
 	return nil
 }
 
-func SaveIDEData() error {
+func SaveIDESettings() error {
 	if DataDirPath == "" {
 		return errors.New("path to data directory must be defined")
 	}
@@ -129,11 +131,11 @@ func SaveIDEData() error {
 	}
 
 	// save ide data
-	p := ideDataFileName()
+	p := ideSettingsFileName()
 
 	buf := &bytes.Buffer{}
 
-	if err := json.NewEncoder(buf).Encode(D.IDEData); err != nil {
+	if err := json.NewEncoder(buf).Encode(D.IDESettings); err != nil {
 		return errors.New("could not serialize ide data!")
 	}
 
@@ -148,8 +150,8 @@ func userDataFileName() string {
 	return filepath.Join(DataDirPath, addEnvSuffix(defaultUserDataFileName))
 }
 
-func ideDataFileName() string {
-	return filepath.Join(DataDirPath, addEnvSuffix(defaultIDEDataFileName))
+func ideSettingsFileName() string {
+	return filepath.Join(DataDirPath, addEnvSuffix(defaultIDESettingsFileName))
 }
 
 func addEnvSuffix(p string) string {

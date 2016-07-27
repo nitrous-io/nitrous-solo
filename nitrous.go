@@ -42,7 +42,7 @@ func main() {
 	if err := data.LoadUserData(); err != nil {
 		logrus.Fatal(err)
 	}
-	if err := data.LoadIDEData(); err != nil {
+	if err := data.LoadIDESettings(); err != nil {
 		logrus.Fatal(err)
 	}
 
