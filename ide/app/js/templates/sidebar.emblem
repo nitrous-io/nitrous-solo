@@ -1,10 +1,10 @@
 .sidebar-body
   .ide-toolbar.top
-    h2 title={App.router.ideController.content.name}
-      = App.router.ideController.content.name
+    h2 title={rootPath.absolutePath}
+      = rootPath.absolutePath
     .ide-toolbar-btns
       .ui.dropdown.btn.icon title='Settings' disabled=socketNotReady
-        span.more-icn
+        i.fa.fa-bars
         ul.dropdown-menu.right
           li
             a href='#' click='didClickSetHomeAsRoot target="view"'
