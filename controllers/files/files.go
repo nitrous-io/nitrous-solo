@@ -6,11 +6,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nitrous-io/nitrous-solo/controllers"
+	"github.com/nitrous-io/nitrous-solo/data"
 	"github.com/nitrous-io/nitrous-solo/pkg/atomicwrite"
 )
 
@@ -27,6 +29,7 @@ func Upload(c *gin.Context) {
 	}
 
 	var location string
+
 	for {
 		part, err := reader.NextPart()
 		if err == io.EOF {
@@ -47,6 +50,21 @@ func Upload(c *gin.Context) {
 			}
 
 			location = string(out)
+
+			homePath, err := data.HomePath(ud)
+			if err != nil {
+				controllers.InternalServerError(c, err)
+				return
+			}
+
+			relPath, err := filepath.Rel(homePath, location)
+			if err != nil || strings.HasPrefix(relPath, "..") {
+				c.JSON(http.StatusForbidden, gin.H{
+					"error":             "invalid_request",
+					"error_description": "the user does not have permission to write to the path",
+				})
+				return
+			}
 		} else if part.FormName() == "files[]" {
 			if location == "" {
 				c.JSON(422, gin.H{

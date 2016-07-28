@@ -83,6 +83,8 @@ var _ = Describe("files", func() {
 
 	Describe("Upload", func() {
 		var (
+			origHomePath func(u *data.UserData) (string, error)
+
 			location     string
 			filename     string
 			uploadedPath string
@@ -93,13 +95,15 @@ var _ = Describe("files", func() {
 			body := &bytes.Buffer{}
 			writer := multipart.NewWriter(body)
 
-			part, err := writer.CreateFormField("location")
-			Expect(err).To(BeNil())
+			if location != "" {
+				part, err := writer.CreateFormField("location")
+				Expect(err).To(BeNil())
 
-			_, err = part.Write([]byte(location))
-			Expect(err).To(BeNil())
+				_, err = part.Write([]byte(location))
+				Expect(err).To(BeNil())
+			}
 
-			part, err = writer.CreateFormFile(partName, filename)
+			part, err := writer.CreateFormFile(partName, filename)
 			Expect(err).To(BeNil())
 
 			_, err = part.Write([]byte(content))
@@ -129,6 +133,11 @@ var _ = Describe("files", func() {
 		}
 
 		BeforeEach(func() {
+			origHomePath = data.HomePath
+			data.HomePath = func(u *data.UserData) (string, error) {
+				return dir, nil
+			}
+
 			location = dir
 			filename = "foo-bar.txt"
 			uploadedPath = filepath.Join(location, filename)
@@ -136,6 +145,10 @@ var _ = Describe("files", func() {
 			headers = http.Header{
 				"Authorization": {"Token " + tok},
 			}
+		})
+
+		AfterEach(func() {
+			data.HomePath = origHomePath
 		})
 
 		It("returns 200 OK", func() {
@@ -255,6 +268,33 @@ var _ = Describe("files", func() {
 		Context("when the user does not have permission to write to the path", func() {
 			BeforeEach(func() {
 				Expect(os.Chmod(dir, 0400)).To(BeNil())
+			})
+
+			It("returns 403 with invalid_request", func() {
+				doRequest(location, "files[]", "hello\nworld")
+
+				b := &bytes.Buffer{}
+				_, err = b.ReadFrom(res.Body)
+				Expect(err).To(BeNil())
+
+				Expect(res.StatusCode).To(Equal(http.StatusForbidden))
+				Expect(b.String()).To(MatchJSON(`{
+					"error": "invalid_request",
+					"error_description": "the user does not have permission to write to the path"
+				}`))
+			})
+		})
+
+		Context("when a user uploads to the path that is not accessible", func() {
+			var notAccessiblePath string
+
+			BeforeEach(func() {
+				notAccessiblePath, err = ioutil.TempDir("", "nitrous-solo-not-accessiable-path")
+				location = notAccessiblePath
+			})
+
+			AfterEach(func() {
+				os.Remove(notAccessiblePath)
 			})
 
 			It("returns 403 with invalid_request", func() {
