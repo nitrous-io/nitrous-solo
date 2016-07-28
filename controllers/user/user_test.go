@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os/user"
 	"testing"
 
 	"github.com/nitrous-io/nitrous-solo/data"
@@ -20,6 +21,12 @@ import (
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "user")
+}
+
+var currentSystemUser *user.User
+
+func init() {
+	currentSystemUser, _ = user.Current()
 }
 
 var _ = Describe("user", func() {
@@ -45,7 +52,7 @@ var _ = Describe("user", func() {
 		data.D = data.Reset()
 		ud = &data.UserData{
 			Login: "foobar",
-			User:  "nitrous",
+			User:  currentSystemUser.Username,
 		}
 		err := ud.SetPassword("foo123")
 		Expect(err).To(BeNil())
@@ -83,18 +90,17 @@ var _ = Describe("user", func() {
 				doRequest()
 				Expect(res.StatusCode).To(Equal(http.StatusOK))
 
-				Expect(ReadBody(res)).To(MatchJSON(`
-				{
+				Expect(ReadBody(res)).To(MatchJSON(`{
 					"user": {
 						"login": "foobar",
-						"user": "nitrous",
+						"user": "` + currentSystemUser.Username + `",
+						"home": "` + currentSystemUser.HomeDir + `",
 						"ide_settings": {
 							"font-size": 10,
 							"tab-size": 4
 						}
 					}
-				}
-			`))
+				}`))
 			})
 		})
 

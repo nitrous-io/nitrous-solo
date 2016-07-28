@@ -2,6 +2,7 @@ package user
 
 import (
 	"net/http"
+	"os/user"
 
 	"github.com/gin-gonic/gin"
 	. "github.com/nitrous-io/nitrous-solo/controllers"
@@ -11,9 +12,16 @@ import (
 func Show(c *gin.Context) {
 	ud := CurrentUserData(c)
 
+	systemUser, err := user.Lookup(ud.User)
+	if err != nil {
+		InternalServerError(c, err)
+		return
+	}
+
 	u := map[string]interface{}{
 		"login": ud.Login,
 		"user":  ud.User,
+		"home":  systemUser.HomeDir,
 	}
 
 	if ide := CurrentUserIDESettings(c); ide != nil {
