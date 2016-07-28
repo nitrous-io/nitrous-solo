@@ -107,6 +107,7 @@ func Upload(c *gin.Context) {
 }
 
 func Download(c *gin.Context) {
+	ud := controllers.CurrentUserData(c)
 	path := c.Query("path")
 
 	if path == "" {
@@ -131,6 +132,21 @@ func Download(c *gin.Context) {
 			return
 		}
 		controllers.InternalServerError(c, err)
+		return
+	}
+
+	homePath, err := data.HomePath(ud)
+	if err != nil {
+		controllers.InternalServerError(c, err)
+		return
+	}
+
+	relPath, err := filepath.Rel(homePath, path)
+	if err != nil || strings.HasPrefix(relPath, "..") {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error":             "invalid_request",
+			"error_description": "the user does not have permission to read from the path",
+		})
 		return
 	}
 

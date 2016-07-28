@@ -322,9 +322,10 @@ var _ = Describe("files", func() {
 
 	Describe("Download", func() {
 		var (
-			filePath string
-			dir      string
-			err      error
+			origHomePath func(u *data.UserData) (string, error)
+			filePath     string
+			dir          string
+			err          error
 
 			params url.Values
 		)
@@ -335,8 +336,13 @@ var _ = Describe("files", func() {
 		}
 
 		BeforeEach(func() {
-			dir, err = ioutil.TempDir("", "")
+			dir, err = ioutil.TempDir("", "nitrous-solo-download-test")
 			Expect(err).To(BeNil())
+
+			origHomePath = data.HomePath
+			data.HomePath = func(u *data.UserData) (string, error) {
+				return dir, nil
+			}
 
 			filePath = filepath.Join(dir, "hello.txt")
 			Expect(ioutil.WriteFile(filePath, []byte("hello"), 0644)).To(BeNil())
@@ -352,6 +358,7 @@ var _ = Describe("files", func() {
 
 		AfterEach(func() {
 			os.RemoveAll(dir)
+			data.HomePath = origHomePath
 		})
 
 		It("returns 200 OK with the file", func() {
@@ -465,6 +472,40 @@ var _ = Describe("files", func() {
 					"errors": {
 						"path": "is required"
 					}
+				}`))
+			})
+		})
+
+		Context("when a user download from the path that is not accessible", func() {
+			var notAccessiblePath string
+
+			BeforeEach(func() {
+				notAccessiblePath, err = ioutil.TempDir("", "nitrous-solo-not-accessiable-path")
+
+				filePath = filepath.Join(notAccessiblePath, "hello.txt")
+				Expect(ioutil.WriteFile(filePath, []byte("hello"), 0644)).To(BeNil())
+
+				tok, err = token.GenerateTokenString("foobar", token.TempType)
+				Expect(err).To(BeNil())
+
+				params.Set("path", filePath)
+			})
+
+			AfterEach(func() {
+				os.Remove(notAccessiblePath)
+			})
+
+			It("returns 403 with invalid_request", func() {
+				doRequest()
+
+				b := &bytes.Buffer{}
+				_, err = b.ReadFrom(res.Body)
+				Expect(err).To(BeNil())
+
+				Expect(res.StatusCode).To(Equal(http.StatusForbidden))
+				Expect(b.String()).To(MatchJSON(`{
+					"error": "invalid_request",
+					"error_description": "the user does not have permission to read from the path"
 				}`))
 			})
 		})
