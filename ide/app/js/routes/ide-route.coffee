@@ -2,7 +2,7 @@ message = 'You will lose unsaved work if you close the IDE.'
 
 App.IdeRoute = Em.Route.extend
   beforeModel: (transition) ->
-    if !App.get('token')
+    unless App.get('token')
       transition.abort()
 
       if t = App.localStorage.get("token")
@@ -14,7 +14,18 @@ App.IdeRoute = Em.Route.extend
             Authorization: "Token #{t}"
         ).then ((res) =>
           # token is valid. set App.token and resume loading IDE
-          App.set('token', t)
+          App.setProperties
+            token: t
+            login: res.user.login
+            systemUser: res.user.user
+            settings: res.user.ide_settings ? {}
+            homeDir: res.user.home
+
+          if !App.get('settings.homePath')
+            App.set('settings.homePath', App.get('homeDir'))
+          if !App.get('settings.rootPath')
+            App.set('settings.rootPath', App.get('settings.homePath'))
+
           transition.retry()
         ), (jqxhr) =>
           if jqxhr.responseJSON?.error == 'invalid_token'
@@ -30,19 +41,10 @@ App.IdeRoute = Em.Route.extend
       else
         # token is not found in local storage, redirect to login
         window.location.href = '/#/login'
-      return
-
-    userFetch = App.User.fetch().then (user) ->
-      App.set 'user', user
-    userSettingsFetch = App.UserSettings.fetch().then (settings) ->
-      App.set 'userSettings', settings
-    userMetadataFetch = App.UserMetadata.fetch().then (metadata) ->
-      App.set 'userMetadata', metadata
-    Em.RSVP.allSettled([userFetch, userSettingsFetch, userMetadataFetch])
 
   persistData: ->
     TabWatcher.syncChanges()
-    App.get('userSettings')?.save()
+    App.get('settings')?.save()
 
   activate: ->
     # warn the user before actually unload the window. This is helpful to

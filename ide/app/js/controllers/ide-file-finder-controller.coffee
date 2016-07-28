@@ -38,7 +38,7 @@ App.IdeFileFinderController = Em.Controller.extend
     if !path?
       path = this.get('controllers.ideSidebar.rootPath')?.absolutePath
       if !path?
-        path = App.get('userMetadata').home_path
+        path = App.get('settings.homePath')
     @set 'fileFinderDialog', App.FileFinderDialog.create basePath: path
 
   startFind: (pattern, path) ->
@@ -46,7 +46,7 @@ App.IdeFileFinderController = Em.Controller.extend
     socket = App.get('socket')
     return if !dialog || !socket
 
-    path = App.get('userMetadata').home_path if not path?.length
+    path = App.get('settings.homePath') unless path
 
     dialog.find pattern, path, =>
       @set 'findPattern', pattern

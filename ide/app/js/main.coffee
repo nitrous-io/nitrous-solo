@@ -3,8 +3,6 @@ require '!!script!./vendor/handlebars.js'
 require '!!script!./vendor/ember.js'
 require '!!script!./vendor/ember-model.js'
 
-window.FakeJSON = require './fake_json/config'
-
 require '!!script!./vendor/underscore'
 require '!!script!./vendor/md5'
 require '!!script!./vendor/mousetrap'

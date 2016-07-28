@@ -46,9 +46,9 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
     editorPane = App.EditorPane.create(tabs: Em.A())
     @set 'rootPane', editorPane
     @set 'activePane', editorPane
-    @set 'tabWatcher', new TabWatcher(editorPane, App.get('userMetadata'))
+    @set 'tabWatcher', new TabWatcher(editorPane)
 
-    @useUserSettings()
+    @applyIDESettings()
 
     # We do this so that saving using :w in Vim mode works.
     # Sucks that this is a CodeMirror "global".
@@ -63,20 +63,19 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
       @set 'goToLineDialog.hide', true
       @set 'goToLineDialog', null
 
-  useUserSettings: ->
-    userSettings = App.get('userSettings') || {}
+  applyIDESettings: ->
+    settings = App.get('settings') || {}
     _.each App.Editor.SETTINGS, (k) =>
-      setting = userSettings[k.underscore()]
-      if setting?
-        @set(k, setting)
-      @addObserver(k, this, 'updateUserSettings')
+      val = settings[k]
+      if val?
+        @set(k, val)
+      @addObserver(k, this, 'saveIDESettings')
 
-  updateUserSettings: ->
-    userSettings = App.get('userSettings')
-    if userSettings
+  saveIDESettings: ->
+    if settings = App.get('settings')
       _.each App.Editor.SETTINGS, (k) =>
-        userSettings[k.underscore()] = @get(k)
-      userSettings.requestSave()
+        settings[k] = @get(k)
+      App.saveSettings()
 
   removeTab: (tab, forceRemove=false) ->
     tab = @get 'activeTab' unless tab
@@ -148,7 +147,7 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
     docContent = doc.get 'content'
     # FIXME probably not the best way to scope to home path
     path = saveDialog.get 'path'
-    homePath = App.get('userMetadata').home_path
+    homePath = App.get('settings.homePath')
     absolutePath = "#{homePath}/#{path}"
     doc.set 'readOnly', true
 
