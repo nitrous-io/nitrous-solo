@@ -2,8 +2,6 @@ window.EmberENV =
   FEATURES:
     'query-params-new': true
 
-require './fake_json/config'
-
 Em = Ember
 window.NitrousIO = Em.Application.extend Em.Evented,
   rootElement: '#app'
@@ -20,15 +18,12 @@ window.NitrousIO = Em.Application.extend Em.Evented,
   online: if !Em.isNone(window.navigator.onLine) then window.navigator.onLine else true
   offline: Em.computed.not 'online'
 
-  settings: null
-
-  config: null
-
   flashMessage: null
 
-  user: null
-  userSettings: null
-  userMetadata: null
+  login: null
+  systemUser: null
+  homeDir: null
+  settings: null
 
   socket: null
 
@@ -54,6 +49,19 @@ window.NitrousIO = Em.Application.extend Em.Evented,
     slug = App.get 'slug'
     App.set 'title', "#{slug} · IDE"
   ).observes 'slug'
+
+  saveSettings: ->
+    return if @_saveSettingsTimeout
+    @_saveSettingsTimeout = window.setTimeout(=>
+      $.ajax
+        type: 'PUT'
+        url: '/user/ide_settings'
+        contentType: 'application/json'
+        data: JSON.stringify(@get('settings'))
+        headers:
+          Authorization: "Token #{@get('token')}"
+      @_saveSettingsTimeout = null
+    , 1000)
 
 window.App = NitrousIO.create()
 window.Lib = Ember.Namespace.create()

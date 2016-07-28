@@ -27,8 +27,6 @@ klass = App.Path = Em.ArrayProxy.extend Em.SortableMixin,
         return "/"
       components = @constructor.pathToComponents(absolutePath)
       components[components.length - 1]
-    else
-      '~'
   ).property 'absolutePath'
 
   collabPath: (->
@@ -82,8 +80,10 @@ klass = App.Path = Em.ArrayProxy.extend Em.SortableMixin,
     found
 
   updateContent: (newContent) ->
-    absolutePath = @get 'absolutePath'
+    basePath = @get 'absolutePath'
     content = @get 'content'
+
+    basePath = "" if basePath == '/'
 
     allPaths = App.get 'router.ideSidebarController.content'
     existingContentPaths = content.map (path) -> path.get 'absolutePath'
@@ -91,14 +91,16 @@ klass = App.Path = Em.ArrayProxy.extend Em.SortableMixin,
     addedContent = Em.A()
     removedContent = Em.A()
 
-    _getAbsolutePathForItem = (name) ->
-      _.chain([absolutePath, name]).compact().join('/').value()
-
     newContentPaths = []
     newContent.forEach (file) =>
       isDir = file.slice(-1) == '/'
       name = if isDir then file.slice(0, -1) else file
-      absolutePathForItem = _getAbsolutePathForItem(name)
+
+      absolutePathForItem = if basePath?
+        "#{basePath}/#{name}"
+      else
+        name
+
       if existingContentPaths.contains absolutePathForItem
         path = this.findByRelativePath name
         if !isDir && path.get 'directory'
@@ -107,10 +109,12 @@ klass = App.Path = Em.ArrayProxy.extend Em.SortableMixin,
         path = App.Path.create
           absolutePath: absolutePathForItem
         addedContent.push path
+
       path.setProperties
         directory: isDir
         realPath: if (absolutePathForItem.slice(-1) == '/') then absolutePathForItem.slice(0, -1) else absolutePathForItem
-      newContentPaths.push _getAbsolutePathForItem(name)
+
+      newContentPaths.push(absolutePathForItem)
 
     content.forEach (path) ->
       unless newContentPaths.contains path.get('absolutePath')

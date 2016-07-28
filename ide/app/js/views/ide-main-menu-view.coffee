@@ -105,7 +105,7 @@ App.IdeMainMenuView = Em.View.extend
         url: 'https://community.nitrous.io/posts/tagged/changelog'
         target: '_blank'
     ]
-  ).property 'App.container', 'App.container.env', 'App.container.env.NITROUS_README_URL'
+  ).property()
 
   menu: (->
     base = [

@@ -28,9 +28,9 @@ App.IdeSidebarController = Em.ArrayController.extend
   currentDroppable: null
 
   initialize: ->
-    @set 'homePath', homePath = App.Path.create absolutePath: App.get('userMetadata').home_path, directory: true
+    @set 'homePath', homePath = App.Path.create absolutePath: App.get('settings.homePath'), directory: true
     @set 'content', Em.A([homePath])
-    @set 'rootPath', App.Path.create absolutePath: App.get('userMetadata').root_path, directory: true
+    @set 'rootPath', App.Path.create absolutePath: App.get('settings.rootPath'), directory: true
 
   reset: ->
     @set 'homePath', null
@@ -58,7 +58,7 @@ App.IdeSidebarController = Em.ArrayController.extend
   ).observes 'socketReady'
 
   restoreOpenTabs: ->
-    if openTabs = App.get('userMetadata').openTabs
+    if openTabs = App.get('settings.openTabs')
       index = 0
       for tab in openTabs
         if tab.path
@@ -150,11 +150,11 @@ App.IdeSidebarController = Em.ArrayController.extend
   fetchFileList: (path, cb) ->
     socket = @get 'socket'
     path.incrementProperty 'loadCount'
-    socket.fetchFileList path.get('absolutePath'), (err, content) =>
+    socket.fetchFileList path.get('absolutePath'), (err, files) =>
       if err
         @closeDirectory(path)
       else
-        path.updateContent content
+        path.updateContent(files)
         if typeof cb == 'function'
           cb()
       path.decrementProperty 'loadCount'
@@ -249,10 +249,10 @@ App.IdeSidebarController = Em.ArrayController.extend
     @set 'rootPath', path
 
   rootPathDidChange: (->
-    val = @get 'rootPath'
-    return if App.get('userMetadata').root_path == val
-    return if App.get('userMetadata').root_path == val
-    App.get('userMetadata').setMetadata({rootPath: val.get 'collabPath'})
+    rootPath = @get 'rootPath.collabPath'
+    return if App.get('settings.rootPath') == rootPath
+    App.set('settings.rootPath', rootPath)
+    App.saveSettings()
   ).observes 'rootPath'
 
   newPath: (path, directory) ->
