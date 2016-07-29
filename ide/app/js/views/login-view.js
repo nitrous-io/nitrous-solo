@@ -1,4 +1,5 @@
 App.LoginView = Em.View.extend({
+  classNames: ['login-view'],
   templateName: 'login',
 
   didInsertElement() {
@@ -7,6 +8,7 @@ App.LoginView = Em.View.extend({
       if (window.webapp) {
         window.webapp.loading.stop();
       }
+      $('#login-login').focus();
     });
   }
 });

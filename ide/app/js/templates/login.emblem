@@ -1,11 +1,14 @@
-h1 Nitrous Solo Login
+.ui.card
+  h1.logo
+    span Nitrous Solo
 
-if errorMessage
-  p
-    = errorMessage
+  form submit=submit
+    .card-body
+      .ui.input-group
+        Em.TextField id='login-login' value=login placeholder='IDE Username' disabled=submitting
+      .ui.input-group
+        Em.TextField id='login-password' value=password type='password' placeholder='Password' disabled=submitting
 
-Em.TextField value=login placeholder='IDE Username'
-Em.TextField value=password type='password' placeholder='Password'
-
-button click='submit' disabled=submitDisabled
-  | Submit
+    .card-footer
+      .right
+        input.ui.btn.primary type='submit' disabled=submitDisabled value='Login'
