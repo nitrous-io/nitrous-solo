@@ -1,7 +1,11 @@
 package main
 
 import (
+	"crypto/x509/pkix"
 	"flag"
+	"io/ioutil"
+	"log"
+	"os"
 	"os/user"
 	"path/filepath"
 
@@ -10,6 +14,7 @@ import (
 	"github.com/kardianos/osext"
 	"github.com/nitrous-io/nitrous-solo/config"
 	"github.com/nitrous-io/nitrous-solo/data"
+	"github.com/nitrous-io/nitrous-solo/pkg/certgen"
 	"github.com/nitrous-io/nitrous-solo/server"
 )
 
@@ -25,10 +30,23 @@ func main() {
 
 	dataDirPathFlag := flag.String("d", "", "path to data directory")
 	bindAddrFlag := flag.String("b", "0.0.0.0:6877", "bind address and port")
+	sslKeyPathFlag := flag.String("key", "", "path to SSL private key")
+	sslCertPathFlag := flag.String("cert", "", "path to SSL certificate")
+	noSSLFlag := flag.Bool("nossl", false, "disable HTTPS")
+	helpFlag := flag.Bool("h", false, "show help")
+
 	flag.Parse()
+
+	if *helpFlag {
+		flag.PrintDefaults()
+		return
+	}
 
 	dataDirPath := *dataDirPathFlag
 	bindAddr := *bindAddrFlag
+	noSSL := *noSSLFlag
+	sslKeyPath := *sslKeyPathFlag
+	sslCertPath := *sslCertPathFlag
 
 	if dataDirPath == "" {
 		u, err := user.Current()
@@ -47,5 +65,50 @@ func main() {
 	}
 
 	r := server.New(appDir)
-	r.Run(bindAddr)
+	if noSSL {
+		log.Fatal(r.Run(bindAddr))
+	} else {
+		if sslKeyPath == "" && sslCertPath != "" {
+			logrus.Fatal("path to SSL private key must also be specified (--key)")
+		}
+
+		if sslKeyPath != "" && sslCertPath == "" {
+			logrus.Fatal("path to SSL certificate must also be specified (--cert)")
+		}
+
+		if sslKeyPath == "" && sslCertPath == "" {
+			logrus.Warn("SSL certificate and private key aren't specified; falling back to a self-signed certificate.")
+
+			sslKeyPath = filepath.Join(dataDirPath, "selfsigned.key")
+			sslCertPath = filepath.Join(dataDirPath, "selfsigned.crt")
+
+			_, err := os.Stat(sslKeyPath)
+			shouldGen := os.IsNotExist(err)
+			_, err = os.Stat(sslCertPath)
+			shouldGen = shouldGen || os.IsNotExist(err)
+
+			if shouldGen {
+				logrus.Info("Generating a self-signed certificate...")
+				keyData, certData, err := certgen.Generate(pkix.Name{
+					Country:      []string{"US"},
+					Locality:     []string{"San Francisco"},
+					Province:     []string{"CA"},
+					Organization: []string{"Nitrous Solo Self-signed Certificate", "This certificate is provided without warranty!"},
+				})
+				if err != nil {
+					logrus.Fatal(err)
+				}
+
+				if err := ioutil.WriteFile(sslKeyPath, keyData, 0600); err != nil {
+					logrus.Fatalf("could not write private key file: %v", err)
+				}
+
+				if err := ioutil.WriteFile(sslCertPath, certData, 0600); err != nil {
+					logrus.Fatalf("could not write certificate file: %v", err)
+				}
+			}
+		}
+
+		log.Fatal(r.RunTLS(bindAddr, sslCertPath, sslKeyPath))
+	}
 }
