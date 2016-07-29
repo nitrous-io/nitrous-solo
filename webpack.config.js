@@ -15,7 +15,7 @@ const SRC_DIR = path.resolve(__dirname, 'ide'),
       DEST_DIR = path.join(BUILD_DIR, NITROUS_ENV),
       ASSETS_DIR = path.join(DEST_DIR, 'assets');
 
-var jsConfig = {
+const jsConfig = {
   name: 'js',
   entry: {
     bundle: path.join(APP_JS_DIR, 'main.coffee'),
@@ -45,7 +45,7 @@ if (NITROUS_ENV !== 'development') {
   jsConfig.plugins.push(new webpack.optimize.UglifyJsPlugin({compress:{warnings: false}}));
 }
 
-var cssConfig = {
+const cssConfig = {
   name: 'css',
   entry: {
     app: path.join(APP_CSS_DIR, 'application.sass'),
@@ -76,4 +76,21 @@ var cssConfig = {
   }
 };
 
-module.exports = [jsConfig, cssConfig];
+const assetConfig = {
+  name: 'asset',
+  output: {
+    path: ASSETS_DIR,
+    filename: 'asset'
+  },
+
+	plugins: [
+    new CopyWebpackPlugin([
+      {
+        from: path.join(SRC_DIR, 'assets'),
+        to: ASSETS_DIR
+      }
+    ])
+  ],
+};
+
+module.exports = [jsConfig, cssConfig, assetConfig];

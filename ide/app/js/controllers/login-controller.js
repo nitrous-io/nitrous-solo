@@ -1,17 +1,19 @@
 App.LoginController = Em.ObjectController.extend({
   login: null,
   password: null,
-  errorMessage: null,
+  submitting: false,
 
   submitDisabled: (function() {
-    return !(this.get('login') && this.get('password'));
-  }).property('login', 'password'),
+    return !(this.get('login') && this.get('password')) || this.get('submitting');
+  }).property('login', 'password', 'submitting'),
 
   actions: {
     submit() {
+      console.log('submit');
       const login = this.get('login'),
             password = this.get('password');
 
+      this.set('submitting', true);
       $.ajax({
         type: 'POST',
         url: '/token',
@@ -25,8 +27,12 @@ App.LoginController = Em.ObjectController.extend({
           errMsg = jqxhr.responseJSON.error_description || jqxhr.responseJSON.error;
         }
         errMsg = errMsg || `Unexpected response: ${jqxhr.status} ${jqxhr.statusText}`;
-        this.set('errorMessage', errMsg.capitalize());
-      })
+        App.postError(errMsg.capitalize());
+        this.set('submitting', false);
+        Em.run.scheduleOnce('afterRender', () => {
+          $('#login-login').select().focus();
+        });
+      });
     }
   }
 })
