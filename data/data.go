@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/go-fsnotify/fsnotify"
 	"github.com/nitrous-io/nitrous-solo/config"
 	"github.com/nitrous-io/nitrous-solo/pkg/atomicwrite"
 )
@@ -152,6 +153,33 @@ func userDataFileName() string {
 
 func ideSettingsFileName() string {
 	return filepath.Join(DataDirPath, addEnvSuffix(defaultIDESettingsFileName))
+}
+
+func ReloadUserDataUponUpdate() error {
+	watcher, err := fsnotify.NewWatcher()
+	if err = watcher.Add(userDataFileName()); err != nil {
+		return err
+	}
+	defer watcher.Close()
+
+	for {
+		select {
+		case event := <-watcher.Events:
+			if event.Op&fsnotify.Remove > 0 || event.Op&fsnotify.Rename > 0 {
+				return errors.New("user data file is renamed or removed")
+			}
+
+			if event.Op&fsnotify.Write > 0 || event.Op&fsnotify.Create > 0 {
+				if err := LoadIDESettings(); err != nil {
+					return err
+				}
+			}
+		case err := <-watcher.Errors:
+			return err
+		}
+	}
+
+	return nil
 }
 
 func addEnvSuffix(p string) string {

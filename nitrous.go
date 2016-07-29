@@ -42,9 +42,16 @@ func main() {
 	if err := data.LoadUserData(); err != nil {
 		logrus.Fatal(err)
 	}
-	if err := data.LoadIDESettings(); err != nil {
-		logrus.Fatal(err)
+
+	if len(data.D.UserData) == 0 {
+		logrus.Warnf("no users has been added. Please use `nitrousadmin` to add IDE user")
 	}
+
+	go func() {
+		if err := data.ReloadUserDataUponUpdate(); err != nil {
+			logrus.Warnf("failed to reload user data file due to: %v", err)
+		}
+	}()
 
 	r := server.New(appDir)
 	r.Run(bindAddr)
