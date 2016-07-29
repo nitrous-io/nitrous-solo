@@ -2,21 +2,35 @@ package fs
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/nitrous-io/nitrous-solo/data"
 	. "github.com/nitrous-io/nitrous-solo/handlers"
 	"github.com/nitrous-io/nitrous-solo/pkg/ws"
 )
 
 func List(c *ws.Context) {
 	defer c.Done()
-	data := c.Data
+	d := c.Data
 	reply := c.Reply
 
-	if len(data) == 0 {
+	username, ok := c.Meta["user"].(string)
+	if !ok {
+		ReplyUnexpectedError(errors.New("meta data is not intialized"), reply)
+		return
+	}
+
+	ud := data.D.UserData[username]
+	if ud == nil {
+		ReplyUnexpectedError(errors.New("invalid_found"), reply)
+		return
+	}
+
+	if len(d) == 0 {
 		reply([]byte(""))
 		return
 	}
@@ -24,8 +38,21 @@ func List(c *ws.Context) {
 	var j struct {
 		Path string `json:"path"`
 	}
-	if err := json.Unmarshal(data, &j); err != nil {
+
+	if err := json.Unmarshal(d, &j); err != nil {
 		ReplyJSON(H{"error": "invalid_json"}, reply)
+		return
+	}
+
+	homePath, err := data.HomePath(ud)
+	if err != nil {
+		ReplyUnexpectedError(err, reply)
+		return
+	}
+
+	relPath, err := filepath.Rel(homePath, j.Path)
+	if err != nil || strings.HasPrefix(relPath, "..") {
+		ReplyJSON(H{"error": "invalid_path"}, reply)
 		return
 	}
 
