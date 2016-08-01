@@ -63,31 +63,25 @@ App.IdeMainMenuView = Em.View.extend
   userBinding: Em.Binding.oneWay 'App.user'
 
   previewItems: (->
+    host = "#{location.protocol}//#{location.hostname}"
     [
-      menuItem "Port 3000 -- HTTP",
-        url: "http://#{App.get 'container.preview_hostname'}"
-        target: '_blank'
-      menuItem "Port 3000 -- HTTPS",
-        url: "https://#{App.get 'container.preview_hostname'}"
+      menuItem "Port 3000",
+        url: "#{host}:3000"
         target: '_blank'
       menuItem "Port 4000",
-        url: "http://#{App.get 'container.preview_hostname'}:4000"
+        url: "#{host}:4000"
         target: '_blank'
       menuItem "Port 4567",
-        url: "http://#{App.get 'container.preview_hostname'}:4567"
+        url: "#{host}:4567"
         target: '_blank'
       menuItem "Port 8080",
-        url: "http://#{App.get 'container.preview_hostname'}:8080"
+        url: "#{host}:8080"
         target: '_blank'
       menuItem "Port 8888",
-        url: "http://#{App.get 'container.preview_hostname'}:8888"
-        target: '_blank'
-      separator,
-      menuItem 'Preview Help',
-        url: 'https://community.nitrous.io/docs/preview-your-app'
+        url: "#{host}:8888"
         target: '_blank'
     ]
-  ).property 'App.container', 'App.container.previewablePorts.@each'
+  ).property()
 
   helpMenuItems: (->
     items = [
@@ -350,7 +344,7 @@ App.IdeMainMenuView = Em.View.extend
       menu 'Preview', @get('previewItems')
     ]
 
-    base.push(menu 'Help', @get('helpMenuItems'))
+    #base.push(menu 'Help', @get('helpMenuItems'))
 
     base
   ).property('previewItems', 'helpMenuItems')
