@@ -1,0 +1,10 @@
+Package: nitrous-solo
+Version: #VERSION#
+Section: custom
+Priority: optional
+Architecture: all
+Essential: no
+Installed-Size: 1024
+Maintainer: nitrous.io
+Description: Nitrous Solo
+Depends: silversearcher-ag

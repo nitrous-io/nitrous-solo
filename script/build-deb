@@ -1,0 +1,53 @@
+#!/bin/bash
+set -e
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+export NITROUS_ENV=${NITROUS_ENV:-"development"}
+BUILD_DIR="build/$NITROUS_ENV"
+PUBLIC_BUCKET=${PUBLIC_BUCKET:="nitrous-solo-deb"}
+UPLOAD_S3=${UPLOAD_S3:="false"}
+
+cd "$DIR/.."
+
+# Get version from file VERSION
+# Get hash form git
+
+VERSION=$(cat VERSION)
+GIT_HASH=$(git rev-list --max-count=1 --abbrev-commit HEAD)
+
+DEB_DIR="$BUILD_DIR/nitrous-solo-$VERSION-$GIT_HASH"
+[ -d $DEB_DIR ] && rm -rf $DEB_DIR
+
+mkdir -p $DEB_DIR
+
+# Build the binaries
+./script/build-ide
+./script/build-nitrousadmin
+./script/build-server
+
+cp -r deb/* $DEB_DIR
+
+mkdir -p $DEB_DIR/opt/nitrous-solo
+mkdir -p $DEB_DIR/usr/bin
+cp -rv $BUILD_DIR/assets $DEB_DIR/opt/nitrous-solo/assets
+cp -rv $BUILD_DIR/nitrous $DEB_DIR/opt/nitrous-solo/nitrous
+cp -rv $BUILD_DIR/nitrousadmin $DEB_DIR/usr/bin/nitrousadmin
+
+sed "s/#VERSION#/$VERSION-$GIT_HASH/" $DEB_DIR/DEBIAN/control-template > $DEB_DIR/DEBIAN/control
+rm -f $DEB_DIR/DEBIAN/control-template
+
+dpkg-deb --build $DEB_DIR
+
+rm -rf $DEB_DIR
+
+upload_s3() {
+  if [[ "$UPLOAD_S3" == "true" ]]; then
+    s3cmd --access_key=$ACCESS_KEY --secret_key=$SECRET_KEY --acl-public \
+      put $1 s3://$PUBLIC_BUCKET/$2
+  fi
+}
+
+
+# Check if we need to upload to s3
+upload_s3 $BUILD_DIR/nitrous-solo-$VERSION-$GIT_HASH.deb nitrous-solo-$VERSION-$GIT_HASH.deb
+upload_s3 $BUILD_DIR/nitrous-solo-$VERSION-$GIT_HASH.deb nitrous-solo-latest.deb
