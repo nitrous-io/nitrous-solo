@@ -38,7 +38,8 @@ const jsConfig = {
   devtool: 'source-map',
   node: {
     fs: 'empty'
-  }
+  },
+  plugins: []
 };
 
 if (NITROUS_ENV !== 'development') {
