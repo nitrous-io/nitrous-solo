@@ -7,13 +7,12 @@ import (
 	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/nitrous-io/nitrous-solo/config"
 	"github.com/nitrous-io/nitrous-solo/pkg/atomicwrite"
 	"github.com/xenolf/lego/acme"
 )
 
 const (
-	// CaURL = "https://acme-v01.api.letsencrypt.org/directory"
-	CaURL   = "https://acme-staging.api.letsencrypt.org/directory"
 	KeyType = acme.RSA2048
 )
 
@@ -86,7 +85,7 @@ func obtainCert(email, hostname string) (certBytes, pkeyBytes []byte, err error)
 	}
 
 	// The client facilitates our communication with the CA server.
-	client, err := NewACMEClient(CaURL, u, KeyType)
+	client, err := NewACMEClient(config.AcmeURL, u, KeyType)
 	if err != nil {
 		return nil, nil, err
 	}
