@@ -22,13 +22,18 @@ func pemBlockForKey(k *rsa.PrivateKey) *pem.Block {
 }
 
 func Generate(subject pkix.Name) (keyData []byte, certData []byte, err error) {
+	notBefore := time.Now()
+	notAfter := notBefore.Add(36525 * 24 * time.Hour)
+	hostname := "*.nitrous.solo"
+
+	return GenerateWithOptions(subject, hostname, notBefore, notAfter)
+}
+
+func GenerateWithOptions(subject pkix.Name, hostname string, notBefore time.Time, notAfter time.Time) (keyData []byte, certData []byte, err error) {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, nil, errors.New(fmt.Sprintf("failed to generate private key: %v", err))
 	}
-
-	notBefore := time.Now()
-	notAfter := notBefore.Add(36525 * 24 * time.Hour)
 
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
@@ -48,7 +53,7 @@ func Generate(subject pkix.Name) (keyData []byte, certData []byte, err error) {
 		BasicConstraintsValid: true,
 	}
 
-	template.DNSNames = append(template.DNSNames, "*.nitrous.solo")
+	template.DNSNames = append(template.DNSNames, hostname)
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
 	if err != nil {
