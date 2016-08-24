@@ -2,7 +2,9 @@ package le
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -17,7 +19,8 @@ const (
 )
 
 var (
-	CertDataPath = ""
+	CertDataPath   = ""
+	ErrCertExpired = errors.New("cert is expired or expirying soon")
 )
 
 func init() {
@@ -39,7 +42,7 @@ func GetCertPathes() (certPath string, keyPath string, err error) {
 	}
 
 	if !valid {
-		return "", "", nil
+		return "", "", ErrCertExpired
 	}
 
 	return certPath, keyPath, nil
@@ -51,25 +54,19 @@ func GenerateCert(email, hostname string) error {
 		return err
 	}
 
-	certBytes, pkeyBytes, err := obtainCert(email, hostname)
+	cr, err := obtainCert(email, hostname)
 	if err != nil {
 		return err
 	}
 
-	buf := bytes.NewBuffer(certBytes)
-	if err := atomicwrite.AtomicWrite(buf, CertificatePath(hostname), "", 0644, true); err != nil {
-		return err
-	}
-
-	buf = bytes.NewBuffer(pkeyBytes)
-	if err := atomicwrite.AtomicWrite(buf, PrivateKeyPath(hostname), "", 0600, true); err != nil {
-		return err
+	if err := writeCertificateToDisk(hostname, cr); err != nil {
+		return nil
 	}
 
 	return nil
 }
 
-func obtainCert(email, hostname string) (certBytes, pkeyBytes []byte, err error) {
+func createOrFindClient(email, hostname string) (client ACMEClient, err error) {
 	// Look up or create the LE user account
 	u, err := GetUser()
 	if err != nil {
@@ -77,17 +74,17 @@ func obtainCert(email, hostname string) (certBytes, pkeyBytes []byte, err error)
 			// Create new account when current account does not exist
 			u, err = NewUser(email, hostname)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 		} else {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
 	// The client facilitates our communication with the CA server.
-	client, err := NewACMEClient(config.AcmeURL, u, KeyType)
+	client, err = NewACMEClient(config.AcmeURL, u, KeyType)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// If not registered, the user must register an account with the CA
@@ -95,12 +92,12 @@ func obtainCert(email, hostname string) (certBytes, pkeyBytes []byte, err error)
 	if u.Registration == nil {
 		reg, err := client.Register()
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		u.Registration = reg
 
 		if err := SaveUser(u); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		logrus.Info("\nYour sites will be served over HTTPS automatically using Let's Encrypt.")
@@ -109,30 +106,123 @@ func obtainCert(email, hostname string) (certBytes, pkeyBytes []byte, err error)
 
 		// Agree to TOS
 		if err := client.AgreeToTOS(); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
+	}
+
+	return client, nil
+}
+
+func obtainCert(email, hostname string) (*acme.CertificateResource, error) {
+	client, err := createOrFindClient(email, hostname)
+	if err != nil {
+		return nil, err
 	}
 
 	// The acme library takes care of completing the challenges to obtain the certificate(s).
 	// The domains must resolve to this machine or you have to use the DNS challenge.
-	certificate, failures := client.ObtainCertificate([]string{hostname}, true, nil)
+	cr, failures := client.ObtainCertificate([]string{hostname}, true, nil)
 	if len(failures) > 0 {
 		errorMessage := ""
 		for r, err := range failures {
 			errorMessage += r + " : " + err.Error() + "\n"
 		}
-		return nil, nil, errors.New(errorMessage)
+		return nil, errors.New(errorMessage)
 	}
 
-	return certificate.Certificate, certificate.PrivateKey, nil
+	return &cr, nil
+}
+
+func writeCertificateToDisk(hostname string, cr *acme.CertificateResource) error {
+	buf := bytes.NewBuffer(cr.Certificate)
+	if err := atomicwrite.AtomicWrite(buf, CertificatePath(hostname), "", 0644, true); err != nil {
+		return err
+	}
+
+	buf = bytes.NewBuffer(cr.PrivateKey)
+	if err := atomicwrite.AtomicWrite(buf, PrivateKeyPath(hostname), "", 0600, true); err != nil {
+		return err
+	}
+
+	b, err := json.Marshal(cr)
+	if err != nil {
+		return err
+	}
+
+	buf = bytes.NewBuffer(b)
+	if err := atomicwrite.AtomicWrite(buf, CertificateMetaPath(hostname), "", 0644, true); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func readCertificateMetaFromDisk(hostname string) (*acme.CertificateResource, error) {
+	b, err := ioutil.ReadFile(CertificateMetaPath(hostname))
+	if err != nil {
+		return nil, err
+	}
+
+	var cr acme.CertificateResource
+	if err := json.Unmarshal(b, &cr); err != nil {
+		return nil, err
+	}
+
+	b, err = ioutil.ReadFile(CertificatePath(hostname))
+	if err != nil {
+		return nil, err
+	}
+	cr.Certificate = b
+
+	b, err = ioutil.ReadFile(PrivateKeyPath(hostname))
+	if err != nil {
+		return nil, err
+	}
+	cr.PrivateKey = b
+
+	return &cr, nil
+}
+
+func RenewCert() error {
+	u, err := GetUser()
+	if err != nil {
+		return err
+	}
+
+	client, err := createOrFindClient(u.Email, u.Hostname)
+	if err != nil {
+		return err
+	}
+
+	currentCR, err := readCertificateMetaFromDisk(u.Hostname)
+	if err != nil {
+		return err
+	}
+
+	cr, err := client.RenewCertificate(*currentCR, true)
+	if err != nil {
+		if _, ok := err.(acme.TOSError); ok {
+			err := client.AgreeToTOS()
+			if err != nil {
+				return err
+			}
+			cr, err = client.RenewCertificate(*currentCR, true)
+			if err != nil {
+				return err
+			}
+		}
+		return err
+	}
+
+	if err := writeCertificateToDisk(u.Hostname, &cr); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func certDataDirPath() string {
 	return CertDataPath
-}
-
-func certDataPath() string {
-	return filepath.Join(certDataDirPath(), "cert_data.json")
 }
 
 func CertificatePath(hostname string) string {
@@ -141,4 +231,8 @@ func CertificatePath(hostname string) string {
 
 func PrivateKeyPath(hostname string) string {
 	return filepath.Join(certDataDirPath(), hostname+".key")
+}
+
+func CertificateMetaPath(hostname string) string {
+	return filepath.Join(certDataDirPath(), hostname+".json")
 }

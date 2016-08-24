@@ -86,7 +86,19 @@ func main() {
 		// Use Let's Encrypt cert if it exists
 		sslCertPath, sslKeyPath, err := le.GetCertPathes()
 		if err != nil {
-			logrus.Warnf("Failed to read lets encrpyt cert file: %v", err)
+			if err == le.ErrCertExpired {
+				if err := le.RenewCert(); err == nil {
+					var secondErr error
+					sslCertPath, sslKeyPath, secondErr = le.GetCertPathes()
+					if secondErr != nil {
+						logrus.Warnf("Failed to read letsencrpyt cert after renew: %v", err)
+					}
+				} else {
+					logrus.Warnf("Failed to renew letsencrypt cert: %v", err)
+				}
+			} else {
+				logrus.Warnf("Failed to read letsencrpyt cert file: %v", err)
+			}
 		}
 
 		// When a user hasn't generated cert with lets-encrypt,

@@ -17,13 +17,22 @@ var (
 	ACMECertificate []byte
 	ACMEPrivateKey  []byte
 
-	RegisterCalls   Calls
-	AgreeToTOSCalls Calls
+	ACMEDomain        string
+	ACMECertURL       string
+	ACMEAccountRef    string
+	ACMECertStableURL string
+
+	RegisterCalls         Calls
+	AgreeToTOSCalls       Calls
+	RenewCertificateCalls Calls
+
+	RenewCertificateError error
 )
 
 func FakeACMEReset() {
 	RegisterCalls = Calls{}
 	AgreeToTOSCalls = Calls{}
+	RenewCertificateCalls = Calls{}
 }
 
 type ACMEClient struct {
@@ -38,10 +47,32 @@ func NewACMEClient(url string, u acme.User, keyType acme.KeyType) (le.ACMEClient
 
 func (c *ACMEClient) ObtainCertificate(domains []string, bundle bool, privKey crypto.PrivateKey) (acme.CertificateResource, map[string]error) {
 	return acme.CertificateResource{
-		Domain:      domains[0],
-		Certificate: ACMECertificate,
-		PrivateKey:  ACMEPrivateKey,
+		Domain:        ACMEDomain,
+		CertURL:       ACMECertURL,
+		CertStableURL: ACMECertStableURL,
+		AccountRef:    ACMEAccountRef,
+		Certificate:   ACMECertificate,
+		PrivateKey:    ACMEPrivateKey,
 	}, nil
+}
+
+func (c *ACMEClient) RenewCertificate(cr acme.CertificateResource, bundle bool) (acme.CertificateResource, error) {
+	renewedCR := acme.CertificateResource{
+		Domain:        ACMEDomain,
+		CertURL:       ACMECertURL,
+		CertStableURL: ACMECertStableURL,
+		AccountRef:    ACMEAccountRef,
+		Certificate:   ACMECertificate,
+		PrivateKey:    ACMEPrivateKey,
+	}
+
+	RenewCertificateCalls.Add(
+		List{cr, bundle},
+		List{renewedCR, RenewCertificateError},
+		nil,
+	)
+
+	return renewedCR, RenewCertificateError
 }
 
 func (c *ACMEClient) Register() (reg *acme.RegistrationResource, err error) {

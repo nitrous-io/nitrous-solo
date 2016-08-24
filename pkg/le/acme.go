@@ -10,6 +10,7 @@ var NewACMEClient func(url string, u acme.User, keyType acme.KeyType) (ACMEClien
 
 type ACMEClient interface {
 	ObtainCertificate(domains []string, bundle bool, privKey crypto.PrivateKey) (acme.CertificateResource, map[string]error)
+	RenewCertificate(cert acme.CertificateResource, bundle bool) (acme.CertificateResource, error)
 	Register() (*acme.RegistrationResource, error)
 	AgreeToTOS() error
 }

@@ -23,6 +23,10 @@ func (c *LeACMEClient) ObtainCertificate(domains []string, bundle bool, privKey 
 	return c.client.ObtainCertificate(domains, bundle, privKey)
 }
 
+func (c *LeACMEClient) RenewCertificate(cr acme.CertificateResource, bundle bool) (acme.CertificateResource, error) {
+	return c.client.RenewCertificate(cr, bundle)
+}
+
 func (c *LeACMEClient) Register() (*acme.RegistrationResource, error) {
 	return c.client.Register()
 }

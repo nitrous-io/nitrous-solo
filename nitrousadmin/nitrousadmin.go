@@ -59,6 +59,8 @@ func main() {
 			delUser(params)
 		case "sethost":
 			setHost(params)
+		case "renewcert":
+			renewCert(params)
 		default:
 			logrus.Fatalf("Unrecognized subcommand \"%s\"", subcommand)
 		}
@@ -75,6 +77,7 @@ Sub-Commands
 adduser SYSTEM_USERNAME IDE_USERNAME [IDE_PASSWORD]
 deluser USERNAME
 sethost HOSTNAME EMAIL
+renewcert
 	`)+"\n", exeName)
 }
 
@@ -219,4 +222,14 @@ func setHost(params []string) {
 	}
 
 	fmt.Println("Successfully enable https with lets encrypt\n")
+}
+
+func renewCert(params []string) {
+	le.CertDataPath = filepath.Join(data.DataDirPath, "global")
+
+	if err := le.RenewCert(); err != nil {
+		logrus.Fatalf(`could not renew certs: %v`, err)
+	}
+
+	fmt.Println("Successfully renew cert\n")
 }

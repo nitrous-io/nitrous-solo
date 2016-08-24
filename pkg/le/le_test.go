@@ -5,6 +5,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509/pkix"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
@@ -54,14 +55,18 @@ var _ = Describe("le", func() {
 		dir, err = ioutil.TempDir("", "cert_test_path")
 		le.CertDataPath = dir
 
+		hostname = "www.foobar.com"
+		email = "foo@example.com"
+
 		testPKey, testCert, err = certgen.GenerateWithOptions(pkix.Name{}, hostname, time.Now(), time.Now().Add(10*24*time.Hour))
 		Expect(err).To(BeNil())
 
+		fake.ACMEDomain = hostname
 		fake.ACMECertificate = testCert
 		fake.ACMEPrivateKey = testPKey
-
-		hostname = "www.foobar.com"
-		email = "foo@example.com"
+		fake.ACMECertURL = "https://acme.test.org/acme/cert/deadbeef"
+		fake.ACMEAccountRef = "https://acme.test.org/acme/reg/123456"
+		fake.ACMECertStableURL = ""
 	})
 
 	AfterEach(func() {
@@ -105,6 +110,16 @@ var _ = Describe("le", func() {
 			pkeyBytes, err := ioutil.ReadFile(le.PrivateKeyPath(hostname))
 			Expect(err).To(BeNil())
 			Expect(pkeyBytes).To(Equal(testPKey))
+
+			b, err := ioutil.ReadFile(le.CertificateMetaPath(hostname))
+			Expect(err).To(BeNil())
+
+			Expect(b).To(MatchJSON(fmt.Sprintf(`{
+				"domain": "%s",
+				"certUrl": "%s",
+				"accountRef": "%s",
+				"certStableUrl": ""
+			}`, hostname, fake.ACMECertURL, fake.ACMEAccountRef)))
 		})
 
 		Context("when a user does not exist", func() {
@@ -212,10 +227,74 @@ var _ = Describe("le", func() {
 
 					It("does not return certificate and private key path", func() {
 						certPath, keyPath, err := le.GetCertPathes()
-						Expect(err).To(BeNil())
+						Expect(err).NotTo(BeNil())
 						Expect(certPath).To(BeZero())
 						Expect(keyPath).To(BeZero())
 					})
+				})
+			})
+		})
+	})
+
+	Describe("RenewCert", func() {
+		Context("when there is no existing certificate and private key", func() {
+			It("returns an error", func() {
+				err := le.RenewCert()
+				Expect(err).NotTo(BeNil())
+			})
+		})
+
+		Context("when there is existing certificate and private key", func() {
+			BeforeEach(func() {
+				err := le.GenerateCert(email, hostname)
+				Expect(err).To(BeNil())
+
+				fake.ACMECertificate, fake.ACMEPrivateKey, err = certgen.GenerateWithOptions(pkix.Name{}, hostname, time.Now(), time.Now().Add(10*24*time.Hour))
+				Expect(err).To(BeNil())
+
+				fake.ACMECertURL = "https://acme.test.org/acme/cert/deadbeef-renew"
+				fake.ACMEAccountRef = "https://acme.test.org/acme/reg/123456-renew"
+				fake.ACMECertStableURL = ""
+			})
+
+			It("renews certificate", func() {
+				err := le.RenewCert()
+				Expect(err).To(BeNil())
+
+				Expect(fake.RenewCertificateCalls.Count()).To(Equal(1))
+
+				certBytes, err := ioutil.ReadFile(le.CertificatePath(hostname))
+				Expect(err).To(BeNil())
+				Expect(certBytes).To(Equal(fake.ACMECertificate))
+
+				pkeyBytes, err := ioutil.ReadFile(le.PrivateKeyPath(hostname))
+				Expect(err).To(BeNil())
+				Expect(pkeyBytes).To(Equal(fake.ACMEPrivateKey))
+
+				b, err := ioutil.ReadFile(le.CertificateMetaPath(hostname))
+				Expect(err).To(BeNil())
+
+				Expect(b).To(MatchJSON(fmt.Sprintf(`{
+					"domain": "%s",
+					"certUrl": "%s",
+					"accountRef": "%s",
+					"certStableUrl": ""
+				}`, hostname, fake.ACMECertURL, fake.ACMEAccountRef)))
+			})
+
+			Context("when the legal terms changed and need to be agreed again", func() {
+				BeforeEach(func() {
+					fake.FakeACMEReset()
+					remoteError := acme.RemoteError{}
+					tosError := acme.TOSError{remoteError}
+					fake.RenewCertificateError = tosError
+				})
+
+				It("agrees on TOS and retries", func() {
+					le.RenewCert()
+
+					Expect(fake.AgreeToTOSCalls.Count()).To(Equal(1))
+					Expect(fake.RenewCertificateCalls.Count()).To(Equal(2))
 				})
 			})
 		})
