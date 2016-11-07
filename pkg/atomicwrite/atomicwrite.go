@@ -26,6 +26,10 @@ var (
 func AtomicWrite(r io.Reader, path string, runAs string, perm os.FileMode, overwrite bool) error {
 	targetPath := path
 
+	if runAs == "" {
+		return ErrInvalidUser
+	}
+
 	fi, err := os.Lstat(targetPath)
 	if err != nil && !os.IsNotExist(err) {
 		if os.IsPermission(err) {
@@ -101,26 +105,24 @@ func AtomicWrite(r io.Reader, path string, runAs string, perm os.FileMode, overw
 			return err
 		}
 	} else {
-		if runAs != "" {
-			// it is a new file
-			u, err := user.Lookup(runAs)
-			if err != nil {
-				return ErrInvalidUser
-			}
+		// it is a new file
+		u, err := user.Lookup(runAs)
+		if err != nil {
+			return ErrInvalidUser
+		}
 
-			uid, err := strconv.Atoi(u.Uid)
-			if err != nil {
-				return err
-			}
+		uid, err := strconv.Atoi(u.Uid)
+		if err != nil {
+			return err
+		}
 
-			gid, err := strconv.Atoi(u.Gid)
-			if err != nil {
-				return err
-			}
+		gid, err := strconv.Atoi(u.Gid)
+		if err != nil {
+			return err
+		}
 
-			if err := f.Chown(uid, gid); err != nil {
-				return err
-			}
+		if err := f.Chown(uid, gid); err != nil {
+			return err
 		}
 
 		if perm == 0 {

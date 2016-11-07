@@ -50,6 +50,8 @@ var _ = Describe("user", func() {
 		Expect(err).To(BeNil())
 
 		data.D = data.Reset()
+		data.CurrentUser = currentSystemUser.Username
+
 		ud = &data.UserData{
 			Login: "foobar",
 			User:  currentSystemUser.Username,

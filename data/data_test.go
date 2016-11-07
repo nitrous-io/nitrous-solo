@@ -3,6 +3,7 @@ package data_test
 import (
 	"io/ioutil"
 	"os"
+	"os/user"
 	"testing"
 
 	"github.com/nitrous-io/nitrous-solo/data"
@@ -13,6 +14,12 @@ import (
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "data")
+}
+
+var currentSystemUser *user.User
+
+func init() {
+	currentSystemUser, _ = user.Current()
 }
 
 var _ = Describe("data", func() {
@@ -27,10 +34,12 @@ var _ = Describe("data", func() {
 		Expect(err).To(BeNil())
 
 		data.D = data.Reset()
+		data.CurrentUser = currentSystemUser.Username
 	})
 
 	AfterEach(func() {
 		data.DataDirPath = origDataDirPath
+		data.CurrentUser = ""
 		os.Remove(data.DataDirPath)
 	})
 
