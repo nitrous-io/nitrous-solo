@@ -18,12 +18,6 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
   socketBinding: Em.Binding.oneWay 'App.router.ideController.socket'
   socketReadyBinding: Em.Binding.oneWay 'App.router.ideController.socketReady'
 
-  collabEnabledBinding: Em.Binding.oneWay 'App.router.ideController.collabEnabled'
-  collabSocketBinding: Em.Binding.oneWay 'App.router.ideController.collabSocket'
-  collabSocketReadyBinding: Em.Binding.oneWay 'App.router.ideController.collabSocketReady'
-
-  pingerSocketBinding: Em.Binding.oneWay 'App.pingerSocket'
-
   activeFilesMonitorBinding: Em.Binding.oneWay 'App.router.ideController.activeFilesMonitor'
 
   softTabs: true
@@ -39,8 +33,6 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
   removeTrailingWhitespaceOnSave: true
   keybindings: 'default'
   fontSize: null
-
-  trackActivityQueued: false
 
   initialize: ->
     editorPane = App.EditorPane.create(tabs: Em.A())
@@ -102,7 +94,6 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
   handleFileChanged: (err, file) ->
     path = App.Path.create(absolutePath: file)
     if doc = @findProperty 'path', path
-      return unless doc.isOTMaster()
       return unless doc.get('clean')
 
       lastUpdated = doc.get('documentLastUpdated')
@@ -131,8 +122,6 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
           return
         doc.set 'documentLastUpdated', Date.now()
         doc.set 'clean', true
-
-        @trackActivity()
     else
       @set 'saveDialog', App.SaveDialog.create document: doc
 
@@ -153,8 +142,6 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
 
     socket = @get 'socket'
     socket.writeFile absolutePath, false, docContent, _.bind(@didWriteNewFileContent, this)
-
-    @trackActivity()
 
   didWriteNewFileContent: (err, absolutePath) ->
     saveDialog = @get 'saveDialog'
@@ -180,7 +167,6 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
 
   addTab: ->
     @_super.apply this, arguments
-    @trackActivity()
 
   # omit `path` or provide `multiple=true` in attrs to allow for multiple tabs
   # with same path
@@ -211,7 +197,6 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
     lineStr = @get('goToLineDialog.line')
     if line = parseInt(lineStr)
       @get('activeTab')?.set('goToLine', line)
-      @trackActivity()
 
   getFontSize: ->
     if (size = @get 'fontSize')
@@ -237,13 +222,3 @@ App.IdeEditorController = Em.ArrayController.extend App.IdeTabControllerMixin,
 
   resetFontSize: ->
     @set 'fontSize', null
-
-  trackActivity: ->
-    if !@get('trackActivityQueued') # Debounce so that we don't track excessively.
-      window.setTimeout(=>
-        pingerSocket = @get('pingerSocket')
-        return unless pingerSocket && pingerSocket.get('started')
-        @get('pingerSocket').ping()
-        @set('trackActivityQueued', false)
-      , 1000)
-      @set('trackActivityQueued', true)

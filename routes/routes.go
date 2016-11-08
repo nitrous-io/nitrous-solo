@@ -26,8 +26,6 @@ func Draw(r *gin.Engine, appDir string) {
 
 	r.GET("/", root.Index)
 	r.Static("/assets", filepath.Join(appDir, "assets"))
-	r.GET("/ping", ping.Ping)
-
 	r.POST("/token", auth.CreateToken)
 
 	// routes requiring "token" query param
@@ -38,6 +36,7 @@ func Draw(r *gin.Engine, appDir string) {
 		ar.PUT("/user/ide_settings", user.SaveIDESettings)
 		ar.POST("/files", files.Upload)
 		ar.POST("/token/temp", auth.CreateTemporaryToken)
+		ar.GET("/ping", ping.Ping)
 	}
 
 	{ // routes requiring temp token

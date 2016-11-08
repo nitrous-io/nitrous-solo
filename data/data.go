@@ -18,6 +18,7 @@ import (
 var (
 	D           *Data
 	DataDirPath string
+	CurrentUser string
 )
 
 const (
@@ -114,7 +115,7 @@ func SaveUserData() error {
 		return errors.New("could not serialize user data!")
 	}
 
-	if err := atomicwrite.AtomicWrite(buf, p, "", 0600, true); err != nil {
+	if err := atomicwrite.AtomicWrite(buf, p, CurrentUser, 0600, true); err != nil {
 		return errors.New(fmt.Sprintf(`could not save user data file "%s" - %v`, p, err))
 	}
 
@@ -139,7 +140,7 @@ func SaveIDESettings() error {
 		return errors.New("could not serialize ide data!")
 	}
 
-	if err := atomicwrite.AtomicWrite(buf, p, "", 0600, true); err != nil {
+	if err := atomicwrite.AtomicWrite(buf, p, CurrentUser, 0600, true); err != nil {
 		return errors.New(fmt.Sprintf(`could not save ide data file "%s" - %v`, p, err))
 	}
 

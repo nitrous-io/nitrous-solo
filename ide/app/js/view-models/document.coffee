@@ -55,16 +55,6 @@ App.Document = App.TabContent.extend
     @set 'documentLastUpdated', Date.now()
   ).property 'replaceContentTrigger'
 
-  isOTMaster: ->
-    cl = @get 'otClient'
-    return true unless cl
-    clientIDs = Object.keys(cl.clients)
-    return true if clientIDs.length == 0
-    myID = App.get 'router.ideController.collabSocket.connID'
-    smallestID = clientIDs.reduce (a,b)->
-      a < b ? a : b
-    myID < smallestID
-
   processErrMessage: (stderr)->
     errors = Em.A([])
     if stderr
