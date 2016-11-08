@@ -20,15 +20,17 @@ func main() {
 	dataDirPathFlag := flag.String("d", "", "path to data directory")
 	flag.Parse()
 
+	u, err := user.Current()
+	if err != nil {
+		logrus.Fatal("could not determine current user")
+	}
+
 	dataDirPath := *dataDirPathFlag
 	if dataDirPath == "" {
-		u, err := user.Current()
-		if err != nil {
-			logrus.Fatal("could not determine current user")
-		}
 		dataDirPath = filepath.Join(u.HomeDir, ".nitrous-solo")
 	}
 
+	data.CurrentUser = u.Username
 	data.DataDirPath = dataDirPath
 	if err := data.LoadUserData(); err != nil {
 		logrus.Fatal(err)

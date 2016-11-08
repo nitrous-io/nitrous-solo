@@ -36,6 +36,7 @@ App.IdeController = Em.ObjectController.extend
       @set 'socket', socket = App.Socket.create()
       App.set('socket', socket)
       socket.connect()
+      App.set('pinger', App.Pinger.create())
 
       router = App.get 'router'
       router.get('ideLayoutController').initialize()
