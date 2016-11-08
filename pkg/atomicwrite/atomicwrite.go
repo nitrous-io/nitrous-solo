@@ -2,6 +2,7 @@ package atomicwrite
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -21,10 +22,21 @@ var (
 
 	// Unexpected error
 	ErrInvalidOwner = errors.New("failed_to_get_file_owner")
+
+	TempDir = ".nitrous-solo-temp"
 )
 
 func AtomicWrite(r io.Reader, path string, runAs string, perm os.FileMode, overwrite bool) error {
 	targetPath := path
+
+	if runAs == "" {
+		return ErrInvalidUser
+	}
+
+	u, err := user.Lookup(runAs)
+	if err != nil {
+		return ErrInvalidUser
+	}
 
 	fi, err := os.Lstat(targetPath)
 	if err != nil && !os.IsNotExist(err) {
@@ -74,7 +86,12 @@ func AtomicWrite(r io.Reader, path string, runAs string, perm os.FileMode, overw
 		}
 	}
 
-	f, err := ioutil.TempFile("", "nitrous-temp")
+	tempDir := filepath.Join(u.HomeDir, TempDir)
+	if err := os.MkdirAll(tempDir, 0700); err != nil {
+		return errors.New(fmt.Sprintf(`could not create directory "%s"`, tempDir))
+	}
+
+	f, err := ioutil.TempFile(tempDir, "nitrous-temp")
 	if err != nil {
 		return err
 	}
@@ -101,26 +118,19 @@ func AtomicWrite(r io.Reader, path string, runAs string, perm os.FileMode, overw
 			return err
 		}
 	} else {
-		if runAs != "" {
-			// it is a new file
-			u, err := user.Lookup(runAs)
-			if err != nil {
-				return ErrInvalidUser
-			}
+		// it is a new file
+		uid, err := strconv.Atoi(u.Uid)
+		if err != nil {
+			return err
+		}
 
-			uid, err := strconv.Atoi(u.Uid)
-			if err != nil {
-				return err
-			}
+		gid, err := strconv.Atoi(u.Gid)
+		if err != nil {
+			return err
+		}
 
-			gid, err := strconv.Atoi(u.Gid)
-			if err != nil {
-				return err
-			}
-
-			if err := f.Chown(uid, gid); err != nil {
-				return err
-			}
+		if err := f.Chown(uid, gid); err != nil {
+			return err
 		}
 
 		if perm == 0 {
