@@ -1,0 +1,40 @@
+.ui.topnav
+  .primary-nav
+    ul.nav
+      each view.menu
+        li.ui.dropdown
+          a href='#'
+            = name
+          App.IdeMenuView content=this
+
+  .secondary-nav
+    ul.nav
+      if App.pinger
+        li
+          App.IdePingerView
+      unless App.chromeApp
+        li.ui.dropdown.account-menu
+          a href='#'
+            = App.login
+            .ui.dropdown-triangle
+          ul.dropdown-menu.right
+            li
+              a href='#' click=logout
+                | Log Out
+
+#about-nitrous.ui.modal
+  .ui.card
+    h2.card-header
+      | About Nitrous
+    .card-body
+      .logo Nitrous
+      p
+        | &trade; and &copy; 2012-
+        = view.currentYear
+        '
+        | Nitrous, Inc.
+        br
+        | All Rights Reserved.
+    .card-footer
+      .right
+        button.ui.btn click='closeAboutDialog target="view"' OK

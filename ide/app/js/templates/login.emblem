@@ -1,0 +1,14 @@
+.ui.card
+  h1.logo
+    span Nitrous Solo
+
+  form submit=submit
+    .card-body
+      .ui.input-group
+        Em.TextField id='login-login' value=login placeholder='IDE Username' disabled=submitting
+      .ui.input-group
+        Em.TextField id='login-password' value=password type='password' placeholder='Password' disabled=submitting
+
+    .card-footer
+      .right
+        input.ui.btn.primary type='submit' disabled=submitDisabled value='Login'

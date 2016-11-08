@@ -7,4 +7,4 @@ BUILD_DIR="build/$NITROUS_ENV"
 
 cd "$DIR/.."
 script/build-nitrousadmin
-"$BUILD_DIR/nitrousadmin" "$@"
+sudo "$BUILD_DIR/nitrousadmin" "$@"

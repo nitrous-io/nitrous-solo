@@ -1,0 +1,83 @@
+require '../mixins/inject-terminal-iframe-mixin'
+
+consoleSessionViewNextId = 0
+
+App.IdeConsoleSessionView = Em.View.extend App.InjectTerminalIframeMixin,
+  templateName: 'console-session'
+  consoleSessionViewId: null
+  consoleSession: null
+  classNames: ['ide-console-session-view']
+  classNameBindings: ['consoleSession.active:active']
+
+  iframeInjected: false
+
+  init: ->
+    @set 'consoleSessionViewId', ++consoleSessionViewNextId
+    @_super.apply this, arguments
+
+  didInsertElement: ->
+    @_super()
+    $(window).on "orientationchange.ideConsoleSessionView#{@get 'consoleSessionViewId'}", _.bind(@didChangeOrientation, this)
+    $(window).on "unload.#{@get('elementId')}", =>
+      @disconnect()
+      return # need to return void
+    @injectIframe()
+
+  willDestroyElement: ->
+    @_super()
+    @disconnect()
+    $(window).off "orientationchange.ideConsoleSessionView#{@get 'consoleSessionViewId'}"
+    $(window).off "unload.#{@get('elementId')}"
+
+  focusDidChange: (->
+    if focused = @get 'consoleSession.focused'
+      if iframeWindow = @$('iframe')[0]?.contentWindow
+        if activeDocument = App.get 'router.ideEditorController.activeTab'
+          activeDocument.set 'focused', false
+        iframeWindow.focus()
+        iframeWindow.NitrousTerminal?.focus?()
+  ).observes 'consoleSession.focused'
+
+  socketReadyDidChange: (->
+    if consoleSession = @get('consoleSession')
+      terminal = consoleSession.get('terminal')
+
+      if App.get('router.ideController.socketReady')
+        if terminal && consoleSession.get('shellSessionID')
+          @get('controller')?.attach(consoleSession, terminal)
+      else
+        terminal?.didExit("connection lost")
+  ).observes 'App.router.ideController.socketReady'
+
+  didChangeOrientation: ->
+    window.setTimeout(=>
+      if iframe = @$('iframe')[0]
+        iframe.style.width = $('body').width() + 'px';
+        iframe.contentWindow?.App?.page?.term?.sizeToFit?()
+        window.setTimeout(->
+          iframe.style.width = '100%'
+        , 10)
+    , 800)
+
+  disconnect: ->
+    @$('iframe')[0]?.contentWindow?.NitrousTerminal?.destroy()
+
+  injectIframe: ->
+    return if @get 'iframeInjected'
+    @set 'iframeInjected', true
+    Em.run.scheduleOnce 'afterRender', this, ->
+      controller = @get 'controller'
+      consoleSession = @get 'consoleSession'
+
+      @injectTerminalIframe (terminal) =>
+        consoleSession.set 'terminal', terminal
+        terminal.ide = true
+        terminal.term.write 'Connecting...'
+        terminal.didBlur = =>
+          consoleSession.set 'focused', false
+        terminal.didChangeTitle = (title) =>
+          consoleSession.set 'title', title
+        if consoleSession.get('shellSessionID')
+          controller.attach(consoleSession, terminal)
+        else
+          controller.startAndAttach(consoleSession, terminal)

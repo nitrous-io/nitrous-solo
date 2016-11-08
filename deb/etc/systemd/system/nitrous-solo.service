@@ -1,0 +1,9 @@
+[Unit]
+Description=nitrous-solo
+
+[Service]
+Environment=NITROUS_ADDR=0.0.0.0:443
+ExecStart=/opt/nitrous-solo/nitrous -b ${NITROUS_ADDR}
+
+[Install]
+WantedBy=multi-user.target

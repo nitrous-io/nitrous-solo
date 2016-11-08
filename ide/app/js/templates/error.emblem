@@ -1,0 +1,9 @@
+h1 :(
+
+h3 Nitrous Solo could not be loaded because something went wrong.
+
+if App.initError
+  p
+    = App.initError
+
+button click='retry target="view"' Retry
