@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 export NITROUS_ENV=${NITROUS_ENV:-"development"}
+export ACME_URL=${ACME_URL:-"https://acme-staging.api.letsencrypt.org/directory"}
 echo "NITROUS_ENV is \"$NITROUS_ENV\""
 
 "$@"

@@ -15,6 +15,7 @@ import (
 	"github.com/nitrous-io/nitrous-solo/config"
 	"github.com/nitrous-io/nitrous-solo/data"
 	"github.com/nitrous-io/nitrous-solo/pkg/certgen"
+	"github.com/nitrous-io/nitrous-solo/pkg/le"
 	"github.com/nitrous-io/nitrous-solo/server"
 )
 
@@ -59,6 +60,8 @@ func main() {
 
 	data.CurrentUser = u.Username
 	data.DataDirPath = dataDirPath
+	le.CertDataPath = filepath.Join(dataDirPath, "global")
+
 	if err := data.LoadUserData(); err != nil {
 		logrus.Fatal(err)
 	}
@@ -70,6 +73,10 @@ func main() {
 	if noSSL {
 		log.Fatal(r.Run(bindAddr))
 	} else {
+		if sslKeyPath != "" && sslCertPath != "" {
+			log.Fatal(r.RunTLS(bindAddr, sslCertPath, sslKeyPath))
+		}
+
 		if sslKeyPath == "" && sslCertPath != "" {
 			logrus.Fatal("path to SSL private key must also be specified (--key)")
 		}
@@ -78,6 +85,26 @@ func main() {
 			logrus.Fatal("path to SSL certificate must also be specified (--cert)")
 		}
 
+		// Use Let's Encrypt cert if it exists
+		sslCertPath, sslKeyPath, err := le.GetCertPathes()
+		if err != nil {
+			if err == le.ErrCertExpired {
+				if err := le.RenewCert(); err == nil {
+					var secondErr error
+					sslCertPath, sslKeyPath, secondErr = le.GetCertPathes()
+					if secondErr != nil {
+						logrus.Warnf("Failed to read letsencrpyt cert after renew: %v", err)
+					}
+				} else {
+					logrus.Warnf("Failed to renew letsencrypt cert: %v", err)
+				}
+			} else {
+				logrus.Warnf("Failed to read letsencrpyt cert file: %v", err)
+			}
+		}
+
+		// When a user hasn't generated cert with lets-encrypt,
+		// it generates self-signed cert
 		if sslKeyPath == "" && sslCertPath == "" {
 			logrus.Warn("SSL certificate and private key aren't specified; falling back to a self-signed certificate.")
 

@@ -6,15 +6,21 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kardianos/osext"
 	"github.com/nitrous-io/gopass"
 	"github.com/nitrous-io/nitrous-solo/data"
+	"github.com/nitrous-io/nitrous-solo/pkg/domain"
+	"github.com/nitrous-io/nitrous-solo/pkg/le"
 )
 
-var exeName = "nitrousadmin"
+var (
+	exeName = "nitrousadmin"
+	emailRe = regexp.MustCompile(`\A[^@\s]+@([^@\s]+\.)+[^@\s]+\z`)
+)
 
 func main() {
 	dataDirPathFlag := flag.String("d", "", "path to data directory")
@@ -53,6 +59,10 @@ func main() {
 			addUser(params)
 		case "deluser":
 			delUser(params)
+		case "sethost":
+			setHost(params)
+		case "renewcert":
+			renewCert(params)
 		default:
 			logrus.Fatalf("Unrecognized subcommand \"%s\"", subcommand)
 		}
@@ -68,6 +78,8 @@ Sub-Commands
 ============
 adduser SYSTEM_USERNAME IDE_USERNAME [IDE_PASSWORD]
 deluser USERNAME
+sethost HOSTNAME EMAIL
+renewcert
 	`)+"\n", exeName)
 }
 
@@ -164,4 +176,62 @@ func delUser(params []string) {
 	}
 
 	fmt.Printf("Successfully deleted user \"%s\".\n", login)
+}
+
+func setHost(params []string) {
+	le.CertDataPath = filepath.Join(data.DataDirPath, "global")
+
+	if len(params) < 2 {
+		logrus.Fatalf("Usage: %s hostname HOSTNAME EMAIL", exeName)
+	}
+
+	var err error
+	hostname, err := domain.Sanitize(params[0])
+	if err != nil {
+		logrus.Fatalf(`could not add hostname "%s" on this system: %v`, params[0], err)
+	}
+
+	email := params[1]
+	if len(email) < 5 || !emailRe.MatchString(email) {
+		logrus.Fatalf(`could not add email "%s" on this system: the email address is invalid`, email)
+	}
+
+	certPath, keyPath, err := le.GetCertPathes()
+	if err != nil {
+		if err != le.ErrUserNotFound {
+			logrus.Fatalf(`could not read existing cert files: %v`, email, err)
+		}
+	}
+
+	// If valid cert files exist, it does not generate again
+	if certPath != "" && keyPath != "" {
+		if certPath == le.CertificatePath(hostname) && keyPath == le.PrivateKeyPath(hostname) {
+			if ok, err := le.VerifyExistingCert(hostname); err != nil || !ok {
+				if err != nil {
+					logrus.Warnf(`failed to load existing cert files: %v`, err)
+				} else {
+					logrus.Infof(`cert files will be expired soon in less 2 days`)
+				}
+			} else {
+				logrus.Fatalln(`Valid certs already exists`)
+			}
+		}
+	}
+
+	// Generate new cert with new email and hostname
+	if err := le.GenerateCert(email, hostname); err != nil {
+		logrus.Fatalf(`could not generate certs: %v`, err)
+	}
+
+	fmt.Println("Successfully enable https with lets encrypt\n")
+}
+
+func renewCert(params []string) {
+	le.CertDataPath = filepath.Join(data.DataDirPath, "global")
+
+	if err := le.RenewCert(); err != nil {
+		logrus.Fatalf(`could not renew certs: %v`, err)
+	}
+
+	fmt.Println("Successfully renew cert\n")
 }
