@@ -8,4 +8,4 @@ BUILD_DIR="build/$NITROUS_ENV"
 cd "$DIR/.."
 script/build-server
 script/build-ide
-sudo "$BUILD_DIR/nitrous" -b 127.0.0.1:6877
+sudo "$BUILD_DIR/nitrous" -b 127.0.0.1:6877 "$@"
