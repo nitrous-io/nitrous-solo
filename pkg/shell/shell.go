@@ -1,5 +1,7 @@
 package shell
 
+import "github.com/nitrous-io/nitrous-solo/pkg/escapecsi"
+
 func StartAndAttach(cmd string, args, env []string, wd, runAs string, cols, rows uint, reply func([]byte)) (subscriptionID string, shellSessionID string, err error) {
 	sess, err := startShellSession(cmd, args, env, wd, runAs)
 	if err != nil {
@@ -16,7 +18,8 @@ func StartAndAttach(cmd string, args, env []string, wd, runAs string, cols, rows
 func Attach(shellSessionID string, cols, rows uint, reply func([]byte)) (subscriptionID string, scrollback []byte) {
 	sub := newSubscription(shellSessionID, reply)
 	scrollback = hub.subscribe(sub, cols, rows)
-	return sub.id, scrollback
+
+	return sub.id, escapecsi.EscapeCSI(scrollback)
 }
 
 func Detach(shellSessionID, subscriptionID string) {

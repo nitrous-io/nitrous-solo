@@ -49,6 +49,12 @@ App.IdeConsoleController = Em.ArrayController.extend App.IdeTabControllerMixin, 
             d = atob(scrollback)
           if d
             terminal?.handleData(d)
+            if termSize = terminal?.getSize()
+              # This is to force resize
+              socket.shellResize(shellSessionID, termSize.cols+1, termSize.rows+1)
+              Em.run.later(this, ->
+                socket.shellResize(shellSessionID, termSize.cols, termSize.rows)
+              , 1)
 
         terminal.onKeyDown = (data) =>
           socket.shellInput(shellSessionID, data)
