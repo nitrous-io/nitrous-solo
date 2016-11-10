@@ -53,6 +53,8 @@ func main() {
 			addUser(params)
 		case "deluser":
 			delUser(params)
+		case "chpass":
+			chPass(params)
 		default:
 			logrus.Fatalf("Unrecognized subcommand \"%s\"", subcommand)
 		}
@@ -68,6 +70,7 @@ Sub-Commands
 ============
 adduser SYSTEM_USERNAME IDE_USERNAME [IDE_PASSWORD]
 deluser USERNAME
+chpass IDE_USERNAME [IDE_OLD_PASSWORD] [IDE_NEW_PASSWORD]
 	`)+"\n", exeName)
 }
 
@@ -146,6 +149,7 @@ func addUser(params []string) {
 	} else {
 		fmt.Printf("Successfully added user \"%s\".\n", login)
 	}
+	fmt.Println("Please restart Nitrous Solo for this to take effect.")
 }
 
 func delUser(params []string) {
@@ -164,4 +168,67 @@ func delUser(params []string) {
 	}
 
 	fmt.Printf("Successfully deleted user \"%s\".\n", login)
+	fmt.Println("Please restart Nitrous Solo for this to take effect.")
+}
+
+func chPass(params []string) {
+	if len(params) < 1 {
+		logrus.Fatalf("Usage: %s chpass IDE_USERNAME [IDE_OLD_PASSWORD] [IDE_NEW_PASSWORD]", exeName)
+	}
+
+	login := strings.ToLower(params[0])
+	ud, ok := data.D.UserData[login]
+	if !ok {
+		logrus.Fatalf(`User "%s" not found`, login)
+	}
+
+	var (
+		oldPw string
+		newPw string
+		err   error
+	)
+
+	if len(params) > 1 {
+		oldPw = params[1]
+	} else {
+		for oldPw == "" {
+			oldPw, err = gopass.GetPass(fmt.Sprintf(`Old password for "%s" (entered text will be hidden): `, login))
+			if err != nil {
+				logrus.Fatal(err)
+			}
+		}
+	}
+
+	if len(params) > 2 {
+		newPw = params[2]
+	} else {
+		for newPw == "" {
+			newPw, err = gopass.GetPass(fmt.Sprintf(`New password for "%s" (entered text will be hidden): `, login))
+			if err != nil {
+				logrus.Fatal(err)
+			}
+
+			if len(newPw) < 6 {
+				fmt.Println("Password must be at least 6 characters long, try again.")
+				newPw = ""
+			}
+		}
+	}
+
+	if !ud.VerifyPassword(oldPw) {
+		logrus.Fatal("Invalid old password.")
+	}
+
+	if oldPw == newPw {
+		logrus.Fatal("New password should not be same as old password.")
+	}
+
+	ud.SetPassword(newPw)
+	data.D.UserData[login] = ud
+	if err := data.SaveUserData(); err != nil {
+		logrus.Fatal(err)
+	}
+
+	fmt.Printf("Successfully updated user \"%s\" password.\n", login)
+	fmt.Println("Please restart Nitrous Solo for this to take effect.")
 }
