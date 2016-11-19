@@ -3,13 +3,13 @@
     .ui.input-group
       = input type='text' class='focus' placeholder=view.content.placeholder value=view.content.pattern spellcheck='false'
 
-    if view.content.showStatus
+    if view.content.humanStatus
       .status
         = view.content.humanStatus
     else
-      if view.content.currentResults.length
+      if view.content.list.length
         ul.results
-          each view.content.currentResults
+          each view.content.list
             li class={selected}
               a href='#' click='didClickResult absolutePath target="view"'
                 .filename
