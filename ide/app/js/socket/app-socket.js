@@ -1,5 +1,6 @@
 import Socket from '../pkg/socket';
 import requestTempToken from '../lib/request-temp-token';
+import locate from '../lib/locate';
 
 App.Socket = Em.Object.extend(Em.Evented, {
   token: null,
@@ -134,7 +135,7 @@ App.Socket = Em.Object.extend(Em.Evented, {
       path,
       overwrite,
       content: btoa(encodeUTF8(content))
-    }), function(magName, data, done) {
+    }), function(msgName, data, done) {
       let res;
       try {
         res = JSON.parse(data);
@@ -155,7 +156,7 @@ App.Socket = Em.Object.extend(Em.Evented, {
         '-m', '0755',
         '-p', path
       ]
-    }), function(magName, data, done) {
+    }), function(msgName, data, done) {
       let res;
       try {
         res = JSON.parse(data);
@@ -173,7 +174,7 @@ App.Socket = Em.Object.extend(Em.Evented, {
     this.conn.send('sh.run', JSON.stringify({
       cmd: "rm",
       args: [path]
-    }), function(magName, data, done) {
+    }), function(msgName, data, done) {
       let res;
       try {
         res = JSON.parse(data);
@@ -197,7 +198,7 @@ App.Socket = Em.Object.extend(Em.Evented, {
     this.conn.send('sh.run', JSON.stringify({
       cmd: "rm",
       args: ["-r", path]
-    }), function(magName, data, done) {
+    }), function(msgName, data, done) {
       let res;
       try {
         res = JSON.parse(data);
@@ -215,7 +216,7 @@ App.Socket = Em.Object.extend(Em.Evented, {
     this.conn.send('sh.run', JSON.stringify({
       cmd: "mv",
       args: [path, newPath]
-    }), function(magName, data, done) {
+    }), function(msgName, data, done) {
       let res;
       try {
         res = JSON.parse(data);
@@ -229,7 +230,8 @@ App.Socket = Em.Object.extend(Em.Evented, {
     });
   },
 
-  fileFind(term, root, cb) {
+  fileFind(what, where, cb) {
+    locate(this.conn, what, where, cb);
   },
 
   search(term, path, ignoreCase, useRegexp, filePattern, cb) {
@@ -239,7 +241,7 @@ App.Socket = Em.Object.extend(Em.Evented, {
       ignore_case: ignoreCase,
       use_regexp: useRegexp,
       file_pattern: filePattern
-    }), function(magName, data, done) {
+    }), function(msgName, data, done) {
       let res;
       try {
         res = JSON.parse(data);
